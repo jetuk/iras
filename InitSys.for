@@ -484,8 +484,11 @@
 	do i =1, nGagesInFile
         GageIDObs(i) = 0 !GageIDObs(i) changed to GageIDObs(i), bcs no added flow 100108
   	  do j = 1, TNodes
-          IF(VERIFY(TRIM(GageName(i)),TRIM(NName(j)))==0) !Makes sure the name of the gage is the node name
-     &               GageIDObs(i)=NodeID(j) !!GageIDObs(i,iType) changed to GageIDObs(i), bcs no added flow 100108 Evgenii
+          !IF(VERIFY(TRIM(GageName(i)),TRIM(NName(j)))==0) then !Makes sure the name of the gage is the node name
+          !Evgenii changed above line to the one below so gauge names cannot get confused	  28-3-11
+		IF(TRIM(GageName(i))==TRIM(NName(j))) then
+		          GageIDObs(i)=NodeID(j) !!GageIDObs(i,iType) changed to GageIDObs(i), bcs no added flow 100108 Evgenii
+		end if
         end do
         IF(GageIDObs(i)==0)then !GageIDObs(i,iType) changed to GageIDObs(i), bcs no added flow 100108 Evgenii
           WRITE(*,*)'Errors in Gage names!'
@@ -601,7 +604,10 @@ C     Initialize vectors
             NODE_AREA(JJ,NODE) = 0.0
             NODE_ELEV(JJ,NODE) = 0.0
             NODE_SEEP(JJ,NODE) = 0.0
-         ENDDO
+         END DO
+	   DO JJ = 1, MXSUPLY
+		  Source_Type(jj,node)=0
+	   ENDDO
          sto_perf_node(nn)=.false. !Evgenii 100617
 	   seep_node(node)=.false.   !Evgenii 100617
 	   cons_node(NODE)=.false.   !Evgenii 100617

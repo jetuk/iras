@@ -28,12 +28,12 @@ C     YRMAX  -       "           years for which dynamic functions can be define
 !      for easily debugging example 'Sys_a'
 !      PARAMETER     (LNKMAX = 5, NODMAX = 5,
 !     2               YRMAX  = 2, nMinSteps = 10)
-      PARAMETER     (LNKMAX = 81, NODMAX = 81,
-     2               YRMAX  = 86, nMinSteps = 10)
+      PARAMETER     (LNKMAX = 1000, NODMAX = 1000,
+     2               YRMAX  = 300, nMinSteps = 10)
 C
 C     GAGMAX - Maximum number of gauge sites,
       INTEGER*2      GAGMAX
-      PARAMETER     (GAGMAX  = 6)
+      PARAMETER     (GAGMAX  = 1000)
 !     PARAMETER     (GAGMAX  = 3)               !for debugging
 C
 C     Maximum number of flow-routing reservoirs in a link.    
@@ -47,8 +47,8 @@ C     IAGMAX - maximum number of arguments on each function needing interpolatio
 C              and maximum number of reference nodes where balancing functions
 C              could be defined.
       INTEGER*2      NRMAX, ILKMAX, OLKMAX, IAGMAX
-      PARAMETER     (NRMAX  =  5,
-     2               ILKMAX =  5, OLKMAX =  4, IAGMAX =  10 )
+      PARAMETER     (NRMAX  =  7,
+     2               ILKMAX =  100, OLKMAX =  100, IAGMAX =  10 )
 C
 C
 C
@@ -56,7 +56,7 @@ C     RNMAX - Max # reservoir rule curve sites
 C     GRMAX - Max # reservoirs in a group                               
 C     ZNMAX - Max # reservoir rule curve zones
       INTEGER*2  RNMAX,  GRMAX, ZNMAX
-      PARAMETER (RNMAX=5, GRMAX=5, ZNMAX=2) !Evgenii 091118 changed RNMAX to 5 instead of 2
+      PARAMETER (RNMAX=15, GRMAX=15, ZNMAX=8) !Evgenii 091118 changed RNMAX to 5 instead of 2
 C
 C
 C     Maximum number of sites which can supply water to a demand node

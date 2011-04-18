@@ -148,14 +148,14 @@ C        Initialize total period evaporation and inflow variables.
 C ___________________________________________________________________
 !	EVGENII - Activate four lines below (and calls for DayOutputNodeTS and DayOutputLinkTS
 !	towards end of subroutine) for diagnostic sub-time step OUTPUT
-!	ioutnodes=30 
-!	ioutlinks=40                                                 
-!	OPEN(UNIT = iOutnodes, FILE ='NodesTS.out', STATUS='replace') 
-!	OPEN(UNIT = iOutlinks, FILE ='LinksTS.out', STATUS='replace') 
+	!ioutnodes=30 
+	!ioutlinks=40                                                 
+	!OPEN(UNIT = iOutnodes, FILE ='NodesTS.out', STATUS='replace') 
+	!OPEN(UNIT = iOutlinks, FILE ='LinksTS.out', STATUS='replace') 
 	!Evgenii 091106 changed NQinn into Qinn because no added flow is used below
 !     compute natural flows for current day to NQINN(TNodes)
 
-	Call GetTotalFlow(SysStat(Month),QInn,Success)  		   
+	Call GetTotalFlow(QInn,Success)  		   
       IF(.not.success) GOTO 9999      
  !-------Evgenii took following code out because its not needed now that gage multipliers are out, also no added flow is used 091101     
 	!call GetIncrementalFlow(NQInn, Success) !This doesnt actually do anything but set the total flow to the natural flow Evgenii
@@ -283,6 +283,10 @@ C       Now all nodes and links have been simulated: Accumulated BQLN, EQLN
 C
 	  !Evgenii 102701 added do loop around STEP_DEFICIT calculation
 	  !so that it would adjust STEP_DEFICIT for each node.
+	if (sysstat(18)==730) then
+		continue
+	end if
+ 
 	 DO NN=1,TNODES
 	  If(DMDNODE(nn) .and. capn(nn)==0.0) then
 	    !calculate shortage for time-step, evgenii 100623
@@ -310,27 +314,33 @@ C       ESTO(NN) = DSTO(NN)
 CMRT941107-
 	  
         !Convert units from /time-step /day
-	  INFLOW(NN) = INFLOW(NN) !/DAYSPRPRD  
-        TEVAPN(NN) = TEVAPN(NN) !/DAYSPRPRD
-        TSEEPL(NN) = TSEEPL(NN) !/DAYSPRPRD
-        TOTREL(NN) = TOTREL(NN) !/DAYSPRPRD
-        CONSUMPTION(NN) = CONSUMPTION(NN) !/DAYSPRPRD
+
+	  !Call performance measures calculations at end of time step, added by Evgenii 10616
+	  call StoragePerformance()
+	  !Link Cost calculations at end of time step, added by Evgenii 10713
+	  call LinkCost_and_Power()
+
+	  !Convert units from Mm3/time-step to what guage input units were
+
+	  INFLOW(NN) = INFLOW(NN) /(GageUserUnit(1)*DAYSPRPRD)
+        TEVAPN(NN) = TEVAPN(NN) /(GageUserUnit(1)*DAYSPRPRD)
+        TSEEPL(NN) = TSEEPL(NN) /(GageUserUnit(1)*DAYSPRPRD)
+        TOTREL(NN) = TOTREL(NN) /(GageUserUnit(1)*DAYSPRPRD)
+        CONSUMPTION(NN) = CONSUMPTION(NN) /(GageUserUnit(1)*DAYSPRPRD)
 	
 	
 
        ENDDO
 C
        DO LN = 1,LINKS
-        ENERGY(LN) = ENERGY(LN) !/DAYSPRPRD 
-        BQLN(LN)   = BQLN(LN) !/DAYSPRPRD
-        EQLN(LN)   = EQLN(LN) !/DAYSPRPRD
+        ENERGY(LN) = ENERGY(LN) !/(GageUserUnit(1)*DAYSPRPRD)
+        BQLN(LN)   = BQLN(LN) /(GageUserUnit(1)*DAYSPRPRD)
+        EQLN(LN)   = EQLN(LN) /(GageUserUnit(1)*DAYSPRPRD)
         TOT_LVOL(LN) = TOT_LVOL(LN) !/DAYSPRPRD !Evgenii took out /DAYSPRPRD, volume shouldn't be converted
-C
+	  TLossL(ln)=  TLossL(ln)/(GageUserUnit(1)*DAYSPRPRD)
+
        ENDDO
-	!Call performance measures calculations at end of time step, added by Evgenii 10616
-	call StoragePerformance()
-	!Link Cost calculations at end of time step, added by Evgenii 10713
-	call LinkCost_and_Power()
+
 	
 
 C
@@ -530,7 +540,8 @@ C            A non-storage node
 ! and computes link hydropower.
 ! Compute flows in links going from node. (based on DSTO)
 ! Seperated from FLWSIM.FOR
-      IMPLICIT NONE
+      USE VARS
+	IMPLICIT NONE
       INCLUDE 'IRAS_SYS.INC'
       INCLUDE 'NODE.INC'
       INCLUDE 'LINK.INC'
@@ -555,9 +566,11 @@ C            A non-storage node
 	  Real::    TotDiv(lnkmax)
       LOGICAL*1 HAVDIV
 !-------------------------------------------------------------------------
- 
+ 		adj=0.0
 	!Consumption by node itsself
-         
+         	if (sysstat(19)==2 .and. nn==2) then
+			continue
+		end if
 		REL = DTREL(NN)
           DCONSUMP = 0.0
           nNat=0  !Evgenii 091113 added nNat for total natural links count (non-diversion)
@@ -631,7 +644,8 @@ C                    If out node has storage, adjust by deficit
 				   else 
 				     DO i = 1,tnodes
 					   do j=1,MXSUPLY
-						 if(SUPL_NODE(j,i)==linkid(ln)) then
+						 if(SUPL_NODE(j,i)==linkid(ln).and.
+     &						 Source_Type(j,i)==2) then
 	                      ADJ=STEP_DEFICIT(I)*SUPL_FRAC(j,i)
 				         endif
 	                   end do
@@ -654,7 +668,7 @@ C          surplus of water to this node.
 	                !AVAIL_CAP = MAX(0.0, CapL(LN)- BQLN(LN)) !CapL is the capacity of link per time-step and BQLN accumulates each sub-time step
 				    !ADJ = MIN(REL, AVAIL_CAP) 
 				    !Add this to total diverted to link so that it is seen in the diversion link calculation below
-				!	TotDiv(ln)=TotDiv(ln)+ADJ  
+				!	TotDiv(ln)=TotD iv(ln)+ADJ  
 				   !end if
 				   ADJ = MAX(0.0, ADJ)
                      DBQLN(LN) = ADJ
@@ -666,12 +680,13 @@ C          surplus of water to this node.
 				  !Evgenii 100707 put if then else to replace simple STEP_DEFICIT(out)=STEP_DEFICIT(out)-ADJ line so new source links 
 				  !would pick up deficit reduction from allocation
 				  if (DMDNODE(out)) then
-					STEP_DEFICIT(out)=STEP_DEFICIT(out)-ADJ 
+					STEP_DEFICIT(out)=STEP_DEFICIT(out) -ADJ 
 				  else 
 				     DO i = 1,tnodes
 					   do j=1,MXSUPLY
-						 if(SUPL_NODE(j,i)==linkid(ln)) then
-	                      STEP_DEFICIT(I)=STEP_DEFICIT(I)-ADJ
+						 if(SUPL_NODE(j,i)==linkid(ln).and.
+     &						 Source_Type(j,i)==2) then
+							 STEP_DEFICIT(I)=STEP_DEFICIT(I)-ADJ
 				         endif
 	                   end do
 				     end do

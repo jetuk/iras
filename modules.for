@@ -87,7 +87,8 @@
         !structure defintion of Source
         TYPE ELEMENT_SOURCE
             SEQUENCE 
-		  INTEGER*2   :: GroupID, Policy, CompType, NodeID, Supl_Node
+		  INTEGER*2   :: GroupID, Policy, CompType, NodeID, Supl_Node, 
+     &		  Source_Type
             REAL*4      :: Supl_Frac
         END TYPE ELEMENT_SOURCE
         !structure defintion of rating

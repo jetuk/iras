@@ -323,7 +323,7 @@
       Rule_BL = -1
       Balance_BL = -1
       Performance_BL = -1
-	  Cost_BL = -1      
+	Cost_BL = -1      
 
       
       totalLinePolicyFile = 0
@@ -546,6 +546,7 @@
      &                                SourceArray(nSource)%CompType,
      &                                SourceArray(nSource)%NodeID, 
      &                                SourceArray(nSource)%Supl_Node,
+     & 								SourceArray(nSource)%Source_Type,	!Evgenii 040411 added source_type
      &                                SourceArray(nSource)%Supl_Frac
                 CYCLE
                 END IF

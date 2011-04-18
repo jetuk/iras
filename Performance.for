@@ -117,6 +117,10 @@
 		end do !end do for all pts
 	  end if !sto_perf_node(nn)
 	end do
+	if (sysstat(18)==730) then
+		continue
+	end if
+
 	DO NN = 1, TNODES
 	!now calculate addition performance criteria for flow target nodes
 	    if(CAPN(NN) == 0.0 .and. DMDNODE(nn)) THEN
@@ -171,7 +175,7 @@
 		AnnualCost(ln)=0.0
 		AnnualEng(ln)=0.0
 	END DO
-	
+
 	DO NN = 1, TNODES
 	  if (CAPN(NN) == 0.0 .and. DMDNODE(nn)) then
 !   		 annualSI(NN)=annualSI(NN)+(Annual_SHRTG(nn)
@@ -390,7 +394,8 @@
      &	'SI Time-Step','SD Time-Step','Min Annual SD'
 	flowrecs=sysstat(nrec)
 	DO NN = 1, TNODES
-	  IF(DMDNODE(nn).and. .not.ResvNode(nn)) THEN 	  ! IF(CAPN(NN) == 0.0 .and. DMDNODE(nn))
+	  IF(DMDNODE(nn).and. .not.ResvNode(nn) .and.  
+     &	  .not. gwnode(nn) .and. .not.  natlak(nn))THEN 	  ! IF(CAPN(NN) == 0.0 .and. DMDNODE(nn))
 		!If simulations start in the middle of the year, these calculations are slightly off
 		nSimYears=SYSSTAT(YREND)-SYSSTAT(YRSTART)+1
 		!SI(nn)=100/nSimYears*annualSI(NN)

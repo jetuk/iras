@@ -394,14 +394,12 @@ C
 			!Get date			
 			 !For leap years  
 			if (leapyear(SYSSTAT(SIM_YEAR)))then
-!				call GetMonthDayleap(SysStat(Time), SysStat(Month), 
-!     &				SysStat(Day))  
-				call GetMonthDayleap()
+				call GetMonthDayleap(SysStat(Time), SysStat(Month), 
+     &				SysStat(Day))  
 			 !For normal years
 			else
-!      			call GetMonthDay(SysStat(Time), SysStat(Month),
-!     &			  SysStat(Day))
-				call GetMonthDay()
+      			call GetMonthDay(SysStat(Time), SysStat(Month),
+     &			  SysStat(Day))
 			end if
 			iMonth = SysStat(Month); iDayM = SysStat(Day)
 			!for date debugging

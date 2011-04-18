@@ -86,7 +86,10 @@ C               Average flow rate points for a link
 C               Number of supply nodes associated with a demand site
      1           SUPLY_PTS(NODMAX),
 C               Supply nodes associated with a demand site
-     1           SUPL_NODE(MXSUPLY,NODMAX)
+     1           SUPL_NODE(MXSUPLY,NODMAX),
+	           !Supply type (node or link) added by Evgenii 1110404
+     1           Source_Type(MXSUPLY,NODMAX)
+
 C
 C    Time periods for each node/link at which certain XRD data last found
        INTEGER*2
@@ -204,7 +207,8 @@ C
      1           NODE_EVAP, NODE_ALLO, NODE_ELEV, NODE_SEEP,
      1           NODE_VOL,  NODE_AREA, NODE_RRVOL,Node_MaxQ,
      1           NODE_LAKEQ,SUPL_FRAC, DMD_TARG, DMD_T_CO,DemInc,
-     1           STEP_DEFICIT, NODE_CONSUMP,LAST_STEP_DEFICIT
+     1           STEP_DEFICIT, NODE_CONSUMP,LAST_STEP_DEFICIT,
+     1		   Source_Type
 C
       COMMON /LNKSIM2/
      1           LAST_CI, LAST_CL, LAST_CN,

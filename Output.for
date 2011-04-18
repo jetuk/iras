@@ -192,7 +192,8 @@ C
 	
 		write(ioutfilebin,*)'Run number = ', sysstat(run)
 		write(ioutfilebin,FMT=11,advance='no')     !Write the output category                 
-     &	(begsto(i),i=1,t_storage),(cons(i),i=1,t_cons), 
+     &	(begsto(i),i=1,t_storage),(endsto(i),i=1,t_storage),
+     &	(cons(i),i=1,t_cons), 
      &	(evap(i),i=1,tevap_nodes),(seep(i),i=1,tseep),  
      &	(flowin(i),i=1,tnodes),(outflow(i),i=1,tnodes),                             !(endsto(i),i=1,t_storage)
      &    (unallC(i),i=1,tnodes) !(gagein(i),i=1,t_gage),
@@ -201,7 +202,8 @@ C
 		write(ioutfilebin,*)
 		
 		write(ioutfilebin,FMT=10,advance='no')'Day', !Write the name of node
-     &	(storage_Name(i),i=1,t_storage),(cons_name(i),i=1,t_cons),	
+     &   (storage_Name(i),i=1,t_storage),(storage_Name(i),i=1,t_storage)
+     &	,(cons_name(i),i=1,t_cons),	
      &	(evap_name(i),i=1,tevap_nodes),(seep_name(i),i=1,tseep),
      &	(NName(i),i=1,tnodes),	(NName(i),i=1,tnodes),				!(storage_Name(i),i=1,t_storage)
      &    (NName(i),i=1,tnodes)!(Gage_Name(i),i=1,t_gage)	
@@ -211,7 +213,8 @@ C
 	
 
 	write(ioutfilebin,FMT=9,advance='no')iday, !Write the data for each day 
-     &	(storage_beg(i),i=1,t_storage),(consump(i),i=1,t_cons),
+     &	(storage_beg(i),i=1,t_storage),(storage_end(i),i=1,t_storage)
+     &	,(consump(i),i=1,t_cons),
      &	(tevap(i),i=1,tevap_nodes),(seepage(i),i=1,tseep),
      &	(inflow(i),i=1,tnodes),(TOTREL(i),i=1,tnodes)
      &    ,(unallocated(i),i=1,tnodes) !(gage(i),i=1,t_gage)                      !(storage_end(i),i=1,t_storage),
@@ -219,7 +222,7 @@ C
 	write(ioutfilebin,*)
 	
 9     FORMAT(I6,10000F26.3)
-10    FORMAT(A5,9X,10000A26)
+10    FORMAT(A5,5X,10000A26)
 11	FORMAT(8X, 10000A26)
 
 
@@ -369,12 +372,12 @@ C
       INCLUDE 'NODE.INC'
       INCLUDE 'LINK.INC'
 !  INPUT
-      INTEGER:: iOutFileBin,iDay,NN_SEQ(Nodmax) 
+      INTEGER*2 iOutFileBin,iDay,NN_SEQ(Nodmax) 
 !  Local
-      INTEGER:: i,j,NN,step
-      INTEGER:: j0, j1,k,k1,k2,k3,k4
-	integer :: tloss,tend,tenergy,tgeo,troute
-	real:: Loss(LNKMAX),endln(lnkmax),energyln(LNKMAX),volume(LNKMAX),  
+      INTEGER*2 i,j,NN,step
+      INTEGER*2 j0, j1,k,k1,k2,k3,k4
+	integer*2 tloss,tend,tenergy,tgeo,troute
+	real*4 Loss(LNKMAX),endln(lnkmax),energyln(LNKMAX),volume(LNKMAX),  
      &		depth(LNKMAX),width(LNKMAX),velocity(LNKMAX) 	
 	character(10) begflow(LNKMAX),endflow(LNKMAX),cEnd(LNKMAX)  !Name of storage
 	character(10) Loss_Name(LNKMAX),CLoss(LNKMAX),end_name(LNKMAX),

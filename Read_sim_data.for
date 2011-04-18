@@ -1454,6 +1454,7 @@ C
      &          .and.pSource(L)%NodeID==IDNode)then
             n = n + 1
             SUPL_NODE(n,Node) = pSource(L)%Supl_Node
+		  Source_Type(n,Node) = pSource(L)%Source_Type
             SUPL_FRAC(n,Node) = pSource(L)%Supl_Frac
           END IF
         END DO
@@ -1481,8 +1482,9 @@ C
           IF(GroupRead==PolicyGrp.and.PolicyRead==Policy.and.
      &      CompTypeRead==CompType.and.IDNodeRead==IDNode)then
             n = n + 1
-            read(aLine(iPos+1:),*)aVar, aVar, aVar, aVar,
-     &        SUPL_NODE(n,Node), SUPL_FRAC(n,Node)
+            !Evgenii 110404 added source type to distinguish between node and link sources
+		  read(aLine(iPos+1:),*)aVar, aVar, aVar, aVar,
+     &        SUPL_NODE(n,Node), Source_Type(n,Node), SUPL_FRAC(n,Node)
           END if
         else
           if (n > 0) exit
@@ -1499,7 +1501,7 @@ C
         do i = 1, n
           do j = 1, TNodes
             if (NodeID(j) == SUPL_NODE(i,Node).and.
-     &		   capn(j)>0.0) then  !Evgenii added capn(SUPL_NODE(i,Node)>0.0) so links can be sources too and they dont change their ID here
+     &		   Source_Type(i,Node)==1) then  !Evgenii added Source_Type(n,Node)=1 so links can be sources too and they dont change their ID here
               SUPL_NODE(i,Node) = j
               exit
             end if
@@ -1784,7 +1786,7 @@ C  for Hydropower/pump
       !COMMON: GrpVOL_PTS(RNMAX),ResvIDInGrp(RNMAX),
       !        GrpVol(IAGMAX,RNMAX),BalanceVol(points, nResv, nGrp)
 !  local
-      integer*2 i, n , GroupIDRead, PolicyRead
+      integer*2 i, n , GroupIDRead, PolicyRead, bal
       INTEGER*2 RuleGrpRead, iDatafile, iPos
       CHARACTER*30 aVar
       CHARACTER*256 aLine
@@ -1817,17 +1819,21 @@ C  for Hydropower/pump
 	  if (Index(aLine, 'Balance:') >= 1) then
 	    IF(Balance_BL<0) Balance_BL = L - 1
           iPos = INDEX(aLine, ':')
-          read(aLine(iPos+1:),*)GroupIDRead,PolicyRead,RuleGrpRead
+          read(aLine(iPos+1:),*)GroupIDRead,PolicyRead,RuleGrpRead,bal
           IF(GroupIDRead == PolicyGrp.and.PolicyRead == Policy.and.
      &          RuleGrpRead==RuleGrp) then
            !do i=1,nResvInGrp(iGrpSeq)
 		  n = n + 1
-          read(aLine(iPos+1:),*)aVar, aVar, aVar,
+         !if (bal==0) then !later add in read bal so when balance is on lead reservior you dont need to put in its own balance
+		read(aLine(iPos+1:),*)aVar, aVar, aVar,
      &         BalMethod(n,IGrpSeq),GrpVol(n,IGrpSeq), !Evgenii 1007285 added balance method choice; 0 - Old iras balance method (group storage), 1 - Balance depends only on rule reservoir storage
      &         ((ResvIDInGrp(i,iGrpSeq),RuleResVol(n,i,iGrpSeq),
      &		BalanceVol(n,i,iGrpSeq)),i=1,nResvInGrp(iGrpSeq))         
-
-            call unitConversion(1,UVol, GrpVol(n,iGrpSeq) )
+	   ! end if
+            
+		  
+		  
+		  call unitConversion(1,UVol, GrpVol(n,iGrpSeq) )
             do i = 1,nResvInGrp(iGrpSeq)
               call unitConversion(1,UVol, BalanceVol(n,i,iGrpSeq) )
             end do

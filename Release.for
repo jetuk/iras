@@ -347,16 +347,12 @@ C  Locals
       REAL*4   NEW_STORAGE, TOTAL_STORAGE, TotSurplus, TotDeficit
       REAL*4   NetSurplus, targets(nodmax),RealTRuleVol
 !-------------------------------------------------------------------------------------
-!	if (sysstat(nday)==5398) then
-!		write(*,*)'hi'
-!	end if
-
 C     Initialization...
       BALANCE_GRP = FAIL
 C     If RULENODE not a rulecurve site then exit routine with FAIL
       IF(RULESITE(RULENODE).ne.NodeID(RuleNode))GO TO 9999
       
-	!Evgenii made replaced <=0.000 with <0.0 below so even if no
+	!Evgenii  replaced <=0.000 with <0.0 below so even if no
 	!rule release, balancing function continues
 	if (TOTAL_RELEASE<0.0) GOTO 9999
 
@@ -385,22 +381,28 @@ C
       !GRPRESV(I)={1,...,TNodes}: serial node No. for reservoir node in the group
       TOTAL_STORAGE = 0.0 
       !Compute group's total storage
-	do i = 1, RESV_COUNT
-        do j = 1, TNodes	
-          if (NodeID(j) == ResvIDInGrp(i, iGrpResv)) then
-            GRPRESV(I) = j
-            TOTAL_STORAGE = TOTAL_STORAGE + STORAGES(GRPRESV(I))
-		  if (nodeid(j)==rulesiteID(i)) then   !Evgenii 100728 put this in for data 2nd balancing method.
-			RealTRuleVol=storages(j)
-		  end if
-            exit
-          end if
-        end do
-      end do
+	
+	!Evgenii added if below so that single reserviors do not need balance tables. 12.04.11
+	IF(RESV_COUNT == 1)THEN
+		TOTAL_STORAGE=STORAGES(RULENODE)
+	else if (RESV_COUNT > 1) then
+		do i = 1, RESV_COUNT
+	       do j = 1, TNodes	
+	        if (NodeID(j) == ResvIDInGrp(i, iGrpResv)) then
+	           GRPRESV(I) = j
+			   TOTAL_STORAGE = TOTAL_STORAGE + STORAGES(GRPRESV(I))
+			   if (nodeid(j)==rulesiteID(i)) then   !Evgenii 100728 put this in for data 2nd balancing method.
+				   RealTRuleVol=storages(j)
+			   end if
+	           exit
+	        end if
+	       end do
+	    end do
+	end if
 C
 C     If only one reservoir in the group
       IF(RESV_COUNT.EQ.1)THEN
-        TMP_NODE = GRPRESV(1)
+        TMP_NODE = RULENODE !GRPRESV(1)  !Evgenii replaced GRPRESV(1) with RULENODE out so balance tables are not needed for single reserviors 12.04.11
         STORAGES(TMP_NODE) = STORAGES(TMP_NODE) - TOTAL_RELEASE 
 	  STORAGES(TMP_NODE) = MAX(0.0, STORAGES(TMP_NODE)) 
         BALANCE_GRP = SUCCES
@@ -507,7 +509,8 @@ C     Initialize supplemental releases for this step
 				 
 				IF (CAPN(NN) .GT. 0.0) THEN     !for storage node
 				!Node with storage: Deficit is diff. between target and storage + release from previous subtime step in the current time-step (+releaseTS(nn) added by Evgenii)
-       				TOT_DEFICIT(NN) = DMD_TARG(NN)-DSTO(NN) 
+       			  if (step > 1) then	
+					TOT_DEFICIT(NN) = DMD_TARG(NN)-DSTO(NN) 
  !    &					+releaseTS(nn)           !+ release from previous subtime step in the current time-step (+releaseTS(nn)) added by Evgenii 100608 to account for lag
 					
 					!Evgenii 100708 added check to see if non-rule site resrvrs in group are above filling trigger 
@@ -525,7 +528,7 @@ C     Initialize supplemental releases for this step
 					end if	 	
 					STEP_DEFICIT(NN) = MAX( 0.0, TOT_DEFICIT(NN)) 
 ! 			        STEP_DEFICIT(NN) = TOT_DEFICIT(NN)/steps_left	
-				
+				  end if
 				!For non-storage nodes
 				else
 					!Determin demand reduction due to low supply, if any
@@ -547,6 +550,7 @@ C     Initialize supplemental releases for this step
 					if(EnvFlwNode(NN)) then !Evgenii 100513 Added environmental flow step deficit
 				!Code below is IRAS-2000 code, Evgenii 100301
 				!IRAS 2000 CODE below, doesnt take into accout passive water to reduce deficit	
+					  
 					  STEP_DEFICIT(NN)=(DMD_TARG(NN)-
      & 					  DMD_TARG(NN)*Reduction-QINN(NN))*DAYPERTS
 					  STEP_DEFICIT(NN) = MAX(0.,STEP_DEFICIT(NN))    
@@ -565,9 +569,9 @@ C              supplemental release)*steps left.
 						
 						!DMD_TARG() is  mil m3 per day, converted to mil m3 per time-step by DAYSPRPRD, Evgenii 100303
 						TOT_DEFICIT(NN)=(DMD_TARG(NN)-		  
-     &							DMD_TARG(NN)*Reduction)*DAYSPRPRD
-     &							-INFLOW(NN)- EXPECT_INFL(NN)			
-					    TOT_DEFICIT(NN) = MAX( 0.0, TOT_DEFICIT(NN)) 
+     &						DMD_TARG(NN)*Reduction)*DAYSPRPRD
+     &						-INFLOW(NN)- EXPECT_INFL(NN)			
+						TOT_DEFICIT(NN) = MAX( 0.0, TOT_DEFICIT(NN)) 
 				        STEP_DEFICIT(NN) = TOT_DEFICIT(NN)/steps_left
 					END IF 					 
 				endif 
