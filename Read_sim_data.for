@@ -1793,16 +1793,38 @@ C  for Hydropower/pump
       INTEGER*4 L
 !------------------------------------------------------------------------
       success = .false.
-
+	n=0
       !Kang add 20100629
       cGrpBalance = cGrpBalance +1
       !Kang modify 20100630 
 !      iDatafile = 11
 !      OPEN(UNIT=iDatafile, FILE=TRIM(filename), STATUS='old',
 !     &	 FORM='formatted', ERR= 999)
+      IF(bUseBufferedBinaryData) THEN
+        DO L=1, nBalance
+          IF(pBalance(L)%GroupID==PolicyGrp.and.pBalance(L)%Policy==
+     &      Policy.and.pBalance(L)%RuleID==RuleGrp)then
+            n = n + 1
+            BalMethod(n,IGrpSeq)=BalanceArray(nBalance)%BalMeth
+		  GrpVol(n,IGrpSeq)=BalanceArray(nBalance)%GroupVol	                                							
+            !BalCols=CountColumns(pBalance(L)%charBalance)
+		  aline=pBalance(L)%charBalance
+		  iPos = INDEX(aLine, ':')
+		  read(aLine(iPos+1:),*)aVar, aVar, aVar,avar,avar,          
+     &         ((ResvIDInGrp(i,iGrpSeq),RuleResVol(n,i,iGrpSeq),
+     &		 BalanceVol(n,i,iGrpSeq)),i=1,nResvInGrp(iGrpSeq))  
+ 		  call unitConversion(1,UVol, GrpVol(n,iGrpSeq) )
+            do i = 1,nResvInGrp(iGrpSeq)
+              call unitConversion(1,UVol, BalanceVol(n,i,iGrpSeq) )
+            end do
+		  if (n >= IAGMAX ) exit
+		end if      
+	   end do
+	else
+
       IF(nBufferedLines==0) REWIND(UNIT=iDatafile)
       
-      n = 0
+
       !find line 'Balance:...'
       !Kang modify for improving performance
       L = 1
@@ -1813,26 +1835,22 @@ C  for Hydropower/pump
             aLine = pFileData(L)
             L = L + 1
         ELSE    
-        READ(UNIT=iDatafile,FMT='(A)',ERR=999, END=999) aLine
+		READ(UNIT=iDatafile,FMT='(A)',ERR=999, END=999) aLine
         END IF
        
 	  if (Index(aLine, 'Balance:') >= 1) then
 	    IF(Balance_BL<0) Balance_BL = L - 1
           iPos = INDEX(aLine, ':')
-          read(aLine(iPos+1:),*)GroupIDRead,PolicyRead,RuleGrpRead,bal
+          read(aLine(iPos+1:),*)GroupIDRead,PolicyRead,RuleGrpRead
           IF(GroupIDRead == PolicyGrp.and.PolicyRead == Policy.and.
      &          RuleGrpRead==RuleGrp) then
            !do i=1,nResvInGrp(iGrpSeq)
 		  n = n + 1
-         !if (bal==0) then !later add in read bal so when balance is on lead reservior you dont need to put in its own balance
+          !if (bal==0) then !later add in read bal so when balance is on lead reservior you dont need to put in its own balance
 		read(aLine(iPos+1:),*)aVar, aVar, aVar,
      &         BalMethod(n,IGrpSeq),GrpVol(n,IGrpSeq), !Evgenii 1007285 added balance method choice; 0 - Old iras balance method (group storage), 1 - Balance depends only on rule reservoir storage
      &         ((ResvIDInGrp(i,iGrpSeq),RuleResVol(n,i,iGrpSeq),
-     &		BalanceVol(n,i,iGrpSeq)),i=1,nResvInGrp(iGrpSeq))         
-	   ! end if
-            
-		  
-		  
+     &	     BalanceVol(n,i,iGrpSeq)),i=1,nResvInGrp(iGrpSeq))                     		  		  
 		  call unitConversion(1,UVol, GrpVol(n,iGrpSeq) )
             do i = 1,nResvInGrp(iGrpSeq)
               call unitConversion(1,UVol, BalanceVol(n,i,iGrpSeq) )
@@ -1843,6 +1861,7 @@ C  for Hydropower/pump
           if (n > 0) exit
         END if
       end do
+	end if
       success = .true.
 999   GrpVOL_PTS(iGrpSeq) = n
       !Kang modify 20100630    CLOSE(UNIT=iDataFile)

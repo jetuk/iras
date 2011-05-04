@@ -142,6 +142,13 @@
 		  REAL*4      :: Dem_Thres_limit,DemRedAmt
         END TYPE ELEMENT_DEMRED
 
+	  TYPE ELEMENT_BALANCE	   !Evgenii 110504
+            SEQUENCE 
+		  INTEGER*2   :: GroupID, Policy, RuleID, BalMeth
+		  character*256 :: charBalance
+ 		  REAL*4 :: GroupVol
+        END TYPE ELEMENT_BALANCE
+
         LOGICAL::bUseBufferedBinaryData
         INTEGER*4::nTarget
         TYPE (ELEMENT_TARGET), POINTER::pTarget(:)
@@ -169,6 +176,9 @@
         TYPE (ELEMENT_RULE), POINTER::pRule(:)
 	  INTEGER*4::nDemRed
 	  TYPE (ELEMENT_DEMRED), POINTER::pDemRed(:)
+	  INTEGER*4::nBalance
+	  TYPE (ELEMENT_BALANCE), POINTER::pBALANCE(:)	  !Evgenii 110504
+
 
         
         !Here define globally the value of different fields in the inp file
@@ -186,6 +196,7 @@
         CHARACTER(len=5)::headPump = 'Pump:'
         CHARACTER(len=5)::headRule = 'Rule:'
 	  CHARACTER(len=7)::headDemRed = 'DemRed:'
+	  CHARACTER(len=8)::headBalance = 'Balance:' !Evgenii 110504
 
         integer*2 iPolicyFile
         INTEGER*4 totalLinePolicyFile
@@ -208,7 +219,8 @@
 	TYPE (ELEMENT_POWER_PUMP),DIMENSION(:), ALLOCATABLE, TARGET::PumpArray	
 	TYPE (ELEMENT_RULE),DIMENSION(:), ALLOCATABLE, TARGET::RuleArray	
 	TYPE (ELEMENT_DEMRED),DIMENSION(:), ALLOCATABLE,TARGET::DemRedArray		!Evgenii 100719
- 	
+ 	TYPE (ELEMENT_BALANCE),DIMENSION(:), ALLOCATABLE,TARGET::BalanceArray	!Evgenii 110504
+	
 	END MODULE vars
 	 
      	

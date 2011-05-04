@@ -185,10 +185,10 @@ C ___________________________________________________________________
 	call GetDemandFlow()
 
 	!Add last time steps carryover deficit, added by Evgenii 030310
-	DO NN = 1, TNODES
-		IF (CAPN(NN) == 0.0 .and. LAST_STEP_DEFICIT(NN)>0.0)
-     &		DMD_TARG(NN)=DMD_TARG(NN)+LAST_STEP_DEFICIT(NN)/DAYSPRPRD 
-	END DO
+!	DO NN = 1, TNODES
+!		IF (CAPN(NN) == 0.0 .and. LAST_STEP_DEFICIT(NN)>0.0)
+!     &		DMD_TARG(NN)=DMD_TARG(NN)+	(NN)/DAYSPRPRD 
+!	END DO
 	
 	!LAST_STEP_DEFICIT is converted into mil m3/day to match DMD_TARG units, Evgenii
 !*** Begin daily simulation for each node in the sequence:
@@ -518,9 +518,14 @@ C         Determine final storage volumes at sw node = DSTO
                 !DSTO(NN) = 0.
             ELSE IF(DS .GT. CAPN(NN)) THEN 
                 !This releases any amount over node capacity
-			  DTREL(NN) = DSTO(NN)-CAPN(NN) 
+		  	  DTREL(NN) = DSTO(NN)-CAPN(NN) 
                 !DSTO(NN) = CapN(NN)     after allocation update dsto()
-            else
+             !Evgenii- code below can be used when reseviors should not be filled above their targets
+		   !ELSE IF(DS .GT. DMD_TARG(NN)) THEN 
+                !This releases any amount over node capacity
+		  !	   DTREL(NN) = DSTO(NN)-DMD_TARG(NN) 
+                !DSTO(NN) = CapN(NN)     after allocation update dsto()        		  
+		  else
               !DSTO(NN) = DSTO(NN)-DTREL(NN) 
             END IF
           ELSE
@@ -637,11 +642,11 @@ C                    If out node has storage, adjust by deficit
 		           !Evgenii changed STEP_DEFICIT below to TMP_DEFICIT 100127
 				   !so that TMP_DEFICIT can be adjusted below w/o adjusting STEP_DEFICIT
 				   !Evgenii 100702 put ADJ = STEP_DEFICIT(out) in if loop to allow for demand links not connected to demand nodes to work
-				   if (DMDNODE(out)) then
+				   if (DMDNODE(out) .and. STEP_DEFICIT(out)>0.0) then
 				     ADJ = STEP_DEFICIT(out) !TMP_DEFICIT(OUT)
 				   !Evgenii- If downstream node not a demand node, but this demand link is defined as a source link 
 				   !(from source: line in iras.inp) for a demand node that is not directly downstream (only one link that is not directly upstream of demand node can be a source at this time)
-				   else 
+				   else
 				     DO i = 1,tnodes
 					   do j=1,MXSUPLY
 						 if(SUPL_NODE(j,i)==linkid(ln).and.

@@ -272,14 +272,14 @@
       !COMMON: flowdata
 !  Local
 	INTEGER*2 j,i,id,gagid,LineCounter, iDatafile
-      INTEGER*2 nRead,ierr,ny,nn
+      INTEGER*2 nRead,ierr,ny,nn,ncols
 	INTEGER*2 iPos, nNeedBufferedLinesInText
 
 	CHARACTER*10000 aLine
       CHARACTER*30 aVar
 !  Call
 	LOGICAL CountFileLines
-
+	integer*2 CountColumns
 !Kang modify for improving performance
 	!Initialize some gobal variables
 !----------------------------------------------------------------
@@ -356,7 +356,9 @@
       NULLIFY(pRule)
       nDemRed=0				 !Added by Evgenii 101907 
       NULLIFY(pDemRed)		 !Added by Evgenii 101907 
-      !Open .inp file. NOTE: the value of iDatafile should be different from others
+	nBalance=0				 !Added by Evgenii 110504
+      NULLIFY(pBalance)
+	!Open .inp file. NOTE: the value of iDatafile should be different from others
 	iDatafile = INPFileID
 
 
@@ -402,6 +404,8 @@
                 nRule = nRule+1
 		  ELSE IF(INDEX(aLine,headDemRed)==1) THEN  !Added by Evgenii 101907  
                 nDemRed = nDemRed+1
+		  ELSE IF(INDEX(aLine,headBalance)==1) THEN  !Added by Evgenii 101907  
+                nBalance = nBalance+1
 
             ELSE
                 nNeedBufferedLinesInText = nNeedBufferedLinesInText + 1
@@ -438,7 +442,7 @@
         IF(nPump>0) ALLOCATE (PumpArray(nPump))
         IF(nRule>0) ALLOCATE (RuleArray(nRule))
         IF(nDemRed>0) ALLOCATE (DemRedArray(nDemred))  !Added by Evgenii 101907 
-
+        IF(nBalance>0) ALLOCATE (BalanceArray(nBalance))!Added by Evgenii 110504 
         !set the file position to the beginning of file
         REWIND(UNIT=iDatafile)
         
@@ -457,6 +461,7 @@
         nPump = 0
         nRule = 0
         nDemred=0		 !Added by Evgenii 100719 
+	  nBalance=0	 !Added by Evgenii 110504
         DO WHILE (.TRUE.)
           READ(UNIT=iDatafile,FMT='(A)',iostat=ierr) aLine !Evgenii took out ERR=999
 		IF(ierr ==0) THEN 
@@ -685,7 +690,21 @@
 
                 CYCLE
                 END IF
+			  
+			  iPos = INDEX(aLine,headBalance)		   !Added by Evgenii 110504 
+                IF(iPos>=1 .AND. ALLOCATED(BalanceArray)) THEN
+                    nBalance = nBalance + 1
+                    iPos = iPos + LEN(headBalance)
+				  !count number of characters in avar
+				  BalanceArray(nBalance)%charBalance=trim(aLine)
+                    read(aLine(iPos:),*)BalanceArray(nBalance)%GroupID,
+     &                            BalanceArray(nBalance)%Policy,
+     &                            BalanceArray(nBalance)%RuleID, 
+     &                            BalanceArray(nBalance)%BalMeth,
+     &							BalanceArray(nBalance)%GroupVol
 
+                CYCLE
+                END IF
 
                 LineCounter = LineCounter+1
                 SysFileContent(LineCounter) = TRIM(aLine)
@@ -706,7 +725,8 @@
           IF(ALLOCATED(PowerArray)) pPower => PowerArray(:)
           IF(ALLOCATED(PumpArray)) pPump => PumpArray(:)
           IF(ALLOCATED(RuleArray)) pRule => RuleArray(:)
-		IF(ALLOCATED(DemRedArray)) pdemRed => DemRedArray(:)	
+		IF(ALLOCATED(DemRedArray)) pdemRed => DemRedArray(:)
+		IF(ALLOCATED(BalanceArray)) pBalance => BalanceArray(:)		
 					 !Added by Evgenii 100719 
 	end if
 	rewind (iDatafile)

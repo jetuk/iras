@@ -66,6 +66,7 @@
 	IF(ALLOCATED(DemTimeSeries)) DEALLOCATE(DemTimeSeries)
 	IF(ALLOCATED(DemIDObs)) DEALLOCATE(DemIDObs)
 	IF(ALLOCATED(DemData)) DEALLOCATE(DemData)
-	IF(ALLOCATED(flowfactor)) DEALLOCATE(flowfactor)	
+	IF(ALLOCATED(flowfactor)) DEALLOCATE(flowfactor)
+	IF(ALLOCATED(BalanceArray)) DEALLOCATE(BalanceArray)	
 	return
 	end
