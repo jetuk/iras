@@ -331,9 +331,9 @@
 	xrun=' '
 	write(xrun,*)sysstat(run)
 	xrun=adjustl(xrun)
-	!Add run number to output file name (gaugename.out)
-		!performance_filename='performance'//trim(xrun)//'.out'
-	performance_filename='performance.out'
+!	Add run number to output file name (gaugename.out)
+		performance_filename='performance'//trim(xrun)//'.out'
+	!performance_filename='performance.out'
 	OPEN(UNIT = ioutperf, FILE =trim(performance_filename), 
      &	STATUS='replace') 
 	!calculate total time in failures for each failure zone

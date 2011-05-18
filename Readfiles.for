@@ -5,10 +5,11 @@
       INCLUDE 'NODE.INC'
       INCLUDE 'LINK.INC'
 	!Local
-	integer*2 iFlowFile,LineCounter,nRead
+	integer*2 iFlowFile
 	integer*2 ierr,j
 	logical*1 success
 	character*10000 aLine
+	integer*2 LineCounter, nRead
 	!Call
 	LOGICAL CountFileLines
 !------------------------------------------------------------
@@ -140,8 +141,9 @@
       LOGICAL*1 success
       !COMMON: flowdata
 !  Local
-	INTEGER*2 j,LineCounter, iDemFile
-      INTEGER*2 nGagesInFile,nRead,ierr
+	INTEGER*2 j, iDemFile
+      INTEGER*2 nGagesInFile,ierr
+      INTEGER*2 LineCounter,nRead
 	CHARACTER*10000 aLine
       CHARACTER*30 aVar
 !  Call

@@ -564,6 +564,7 @@ C              Expected "natural" remaining inflow is average over
 C              previous steps of (cumulative inflow - cumulative
 C              supplemental release)*steps left.
 		   	!Natural inflow neglects any attempted extra releases resulting from step-decicits from previous sub-time steps (TOT_SUPL_R), Evgenii 100303
+			!The expected inflow calculation does not yet take into account extra diversion from source demand links 110517 evgenii
 						EXPECT_INFL(nn) = STEPS_LEFT*(INFLOW(NN)-
      &                           TOT_SUPL_R(NN))/(STEP-1)
 						
@@ -584,11 +585,12 @@ C           If a deficit, compute required supplemental releases
 				IF (STEP_DEFICIT(NN).GT.0.0)THEN 
 				 DO I = 1,SUPLY_PTS(NN)
 					 S_NODE = SUPL_NODE(I,NN)      !SUPL_NODE = {1,...TNodes}, not NodeID
-					 IF (S_NODE.GT.0.and. capn(s_node)>=0) THEN !evgenii added capn(s_node)>=0
+					 IF (S_NODE.GT.0.and. capn(s_node)>0) THEN !evgenii added capn(s_node)>0
 					 SUPL_RELEAS(S_NODE) = SUPL_RELEAS(S_NODE) +
      1                            SUPL_FRAC(I,NN)*STEP_DEFICIT(NN)			
 					 !STEP_DEFICIT(S_NODE)=STEP_DEFICIT(S_NODE)
-     &				!	 +SUPL_RELEAS(S_NODE)
+     				!	 +SUPL_RELEAS(S_NODE)
+					 continue
 					 END IF
 				 ENDDO
                    TOT_SUPL_R(NN) = TOT_SUPL_R(NN) + STEP_DEFICIT(NN) 

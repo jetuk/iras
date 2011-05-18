@@ -568,14 +568,12 @@ C            A non-storage node
       INTEGER*2 i, LO, LN, OUT, ST, nNat,j !091113 added nNat for total natural links
       REAL*4    Rel, DCONSUMP,TMP_REL,AVAIL_CAP,ADJ,InStor,OutStor
       REAL*4    FLO_IN, NON_DMD, OrigRel,TMP_DEFICIT(nodmax),DDEM
-	  Real::    TotDiv(lnkmax)
-      LOGICAL*1 HAVDIV
-!-------------------------------------------------------------------------
- 		adj=0.0
+	Real::    TotDiv(lnkmax)
+      Real*4    ADJ_Frac(MXSUPLY,nodmax),ADJ_Temp,StepRed
+	LOGICAL*1 HAVDIV
+!-------------------------------------------------------------------------	
+		adj=0.0
 	!Consumption by node itsself
-         	if (sysstat(19)==2 .and. nn==2) then
-			continue
-		end if
 		REL = DTREL(NN)
           DCONSUMP = 0.0
           nNat=0  !Evgenii 091113 added nNat for total natural links count (non-diversion)
@@ -620,6 +618,7 @@ C           If groundwater link, skip allocation process
             DBQLN(LN)=REL
             REL = 0.0
           END IF
+
 C
 C         Multiple links or single diversion link
 C         Compute allocations to non gw link(s) using allocation fn.
@@ -633,10 +632,12 @@ C           If any link allocation points, allocate flows
 C              Any demand links coming out of this node must be
 C              satisfied first
              DO LO = 1,TOTOUT(NN)
-                LN = OUTLNK(NN,LO)
+                
+			  LN = OUTLNK(NN,LO)
                 IF (.NOT. GWLINK(LN)) THEN
                    DBQLN(LN) = 0.0                   
 				 IF (DMDLINK(LN)) THEN
+				   ADJ=0.0 !Evgenii 110517 added ADJ=0.0. AJD needs to reset to 0 so ADJ from other demand links on the node does not carryover
 				   OUT = NOUT(LN)
 C                    If out node has storage, adjust by deficit
 		           !Evgenii changed STEP_DEFICIT below to TMP_DEFICIT 100127
@@ -647,12 +648,14 @@ C                    If out node has storage, adjust by deficit
 				   !Evgenii- If downstream node not a demand node, but this demand link is defined as a source link 
 				   !(from source: line in iras.inp) for a demand node that is not directly downstream (only one link that is not directly upstream of demand node can be a source at this time)
 				   else
-				     DO i = 1,tnodes
+				     
+					 DO i = 1,tnodes
 					   do j=1,MXSUPLY
 						 if(SUPL_NODE(j,i)==linkid(ln).and.
      &						 Source_Type(j,i)==2) then
-	                      ADJ=STEP_DEFICIT(I)*SUPL_FRAC(j,i)
-				         endif
+						  ADJ=ADJ+STEP_DEFICIT(I)*SUPL_FRAC(j,i)
+						  ADJ_Frac(j,i)=STEP_DEFICIT(I)*SUPL_FRAC(j,i)	  !Evgenii added ADJ_Frac(j,i), which stores how much of the release the demand link 
+						 endif
 	                   end do
 				     end do
                      end if
@@ -679,19 +682,23 @@ C          surplus of water to this node.
                      DBQLN(LN) = ADJ
 				   DDEM=DDEM+ADJ !Evgenii 100223 added DDEM to count total demand link allocation when considering diversions 
                      REL = REL - ADJ
-	
+				   ADJ_Temp=ADJ
                     !Evgenii 091024 put line below in so step deficit is reduced when it recieves inflow
 				  !        this allows for multiples demand links going to the same demand node
 				  !Evgenii 100707 put if then else to replace simple STEP_DEFICIT(out)=STEP_DEFICIT(out)-ADJ line so new source links 
 				  !would pick up deficit reduction from allocation
 				  if (DMDNODE(out)) then
-					STEP_DEFICIT(out)=STEP_DEFICIT(out) -ADJ 
+					STEP_DEFICIT(out)=STEP_DEFICIT(out) -ADJ
 				  else 
 				     DO i = 1,tnodes
 					   do j=1,MXSUPLY
 						 if(SUPL_NODE(j,i)==linkid(ln).and.
-     &						 Source_Type(j,i)==2) then
-							 STEP_DEFICIT(I)=STEP_DEFICIT(I)-ADJ
+     &					   Source_Type(j,i)==2) then
+							 StepRed=MIN(ADJ_Frac(j,i),ADJ_Temp)     !Set the step_deficit reduction to either the target node's share or what is remaining in the link 							
+							 STEP_DEFICIT(I)=STEP_DEFICIT(I)-StepRed !Reduce STEP_DEFICIT
+      						 STEP_DEFICIT(I)=max(STEP_DEFICIT(I),0.0)   	 
+							 ADJ_Temp=ADJ_Temp-StepRed				 !Reduce ADJ_Temp, so target nodes who's share of ADJ is lower priority don't seem like they can get the full ADJ 
+     &							 !- !ADJ  !Evgenii 110517 changed -ADJ to -ADJ_Frac(j,i) (so there can be multiple source links) ADJ-Frac is a part of ADJ
 				         endif
 	                   end do
 				     end do
