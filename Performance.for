@@ -117,10 +117,6 @@
 		end do !end do for all pts
 	  end if !sto_perf_node(nn)
 	end do
-	if (sysstat(18)==730) then
-		continue
-	end if
-
 	DO NN = 1, TNODES
 	!now calculate addition performance criteria for flow target nodes
 	    if(CAPN(NN) == 0.0 .and. DMDNODE(nn)) THEN
@@ -224,7 +220,7 @@
 			  
 					
 
-
+                    
 		!Accumulate pumping energy from power/pump calc in hydsim.for
 		else if(pumplink(ln) .and. ENERGY(ln)< 0.0) then
 		      EngTotHydSim(ln)=EngTotHydSim(ln)+ENERGY(ln)
@@ -248,9 +244,6 @@
 	End
 !************************************************************************
 	subroutine PerformanceOutput()
-
-
-
 	!Created by Evgenii 1006
 	!This subroutine prints out the time step results to a file found in the /out directory.
 	USE vars

@@ -283,9 +283,7 @@ C       Now all nodes and links have been simulated: Accumulated BQLN, EQLN
 C
 	  !Evgenii 102701 added do loop around STEP_DEFICIT calculation
 	  !so that it would adjust STEP_DEFICIT for each node.
-	if (sysstat(18)==730) then
-		continue
-	end if
+
  
 	 DO NN=1,TNODES
 	  If(DMDNODE(nn) .and. capn(nn)==0.0) then
@@ -297,6 +295,14 @@ C
 	  endif
 	 ENDDO
 C      Define final storage volumes ESTO, convert volume totals to daily rates
+	  
+	!Call performance measures calculations at end of time step, added by Evgenii 10616
+	call StoragePerformance()
+	  !Link Cost calculations at end of time step, added by Evgenii 10713
+	call LinkCost_and_Power()
+
+
+
        DO NN = 1,TNODES
 CMRT941107+
 C       The following statements set ESTO to zero for non-storage nodes
@@ -315,10 +321,7 @@ CMRT941107-
 	  
         !Convert units from /time-step /day
 
-	  !Call performance measures calculations at end of time step, added by Evgenii 10616
-	  call StoragePerformance()
-	  !Link Cost calculations at end of time step, added by Evgenii 10713
-	  call LinkCost_and_Power()
+
 
 	  !Convert units from Mm3/time-step to what guage input units were
 

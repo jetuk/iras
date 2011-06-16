@@ -506,25 +506,25 @@ C
 	SELECT CASE (nDays)
           CASE (1:31)
             iMonth = 1; iDay = nDays
-          CASE (32:31+29)
+          CASE (32:60) !31+29)
             iMonth = 2; iDay = nDays - 31
-          CASE (61:59+31)
+          CASE (61:91) !59+31)
             iMonth = 3; iDay = nDays - 60
-          CASE (92:90+30)
+          CASE (92:121) !90+30)
             iMonth = 4; iDay = nDays - 91
-          CASE (122:120+31)
+          CASE (122:152) !120+31)
             iMonth = 5; iDay = nDays - 121
-          CASE (153:151+30)
+          CASE (153:182) !151+30)
             iMonth = 6; iDay = nDays - 152
-          CASE (183:181+31)
+          CASE (183:213) !181+31)
             iMonth = 7; iDay = nDays - 182
-          CASE (214:212+31)
+          CASE (214:244) !212+31)
             iMonth = 8; iDay = nDays - 213
-          CASE (245:243+30)
+          CASE (245:274) !243+30)
             iMonth = 9; iDay = nDays - 244
-          CASE (275:273+31)
+          CASE (275:305) !273+31)
             iMonth = 10; iDay = nDays - 274
-          CASE (306:304+30)
+          CASE (306:335) !304+30)
             iMonth = 11; iDay = nDays - 304
           CASE (337:366)
             iMonth = 12; iDay = nDays - 335

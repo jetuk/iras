@@ -608,7 +608,7 @@ C     Initialize vectors
 	   DO JJ = 1, MXSUPLY
 		  Source_Type(jj,node)=0
 	   ENDDO
-         sto_perf_node(nn)=.false. !Evgenii 100617
+         sto_perf_node(node)=.false. !Evgenii 100617
 	   seep_node(node)=.false.   !Evgenii 100617
 	   cons_node(NODE)=.false.   !Evgenii 100617
 	   DO JJ = 1, thres_pts_max  !Evgenii 100617
@@ -724,7 +724,7 @@ C     Initialize number of previous routing reservoirs
         PolicySysEvap(1,jj) = 0.0
         PolicySysEvap(2,jj) = 0.0
       END do
-      do NN = 1,NODMAX           !for node policy (or Period)
+      do NN = 1, tnodes !NODMAX ! !          !for node policy (or Period)
         do jj = 1,MaxPolicyTypes
           NodePolicy0(jj,NN) = 1
           NodePolicyChg(jj,NN) = .true.
@@ -733,7 +733,7 @@ C     Initialize number of previous routing reservoirs
           end do
         end do
       end do
-      do NN = 1,LNKMAX           !for link policy (or period)
+      do NN = 1,links !LNKMAX ! !           !for link policy (or period)
         do jj = 1,MaxPolicyTypes
           LinkPolicy0(jj,NN) = 1
           LinkPolicyChg(jj,NN) = .true.
