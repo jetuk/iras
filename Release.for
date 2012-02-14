@@ -608,7 +608,7 @@ C           If a deficit, compute required supplemental releases
 
 
 				IF (STEP_DEFICIT(NN).GT.0.0)THEN 
-				 Temp_STEP_DEFICIT(NN)=STEP_DEFICIT(NN)
+				 Temp_STEP_DEFICIT(NN)=STEP_DEFICIT(NN)				
 				 DO I = 1,SUPLY_PTS(NN)
 					 !Reset TotSrcRelease at the first subtime step needed.
 					 !IF	(SYSSTAT(sstep)==0) TotSrcRelease(I,NN)=0.0	!Evgenii 150711
@@ -650,10 +650,12 @@ C           If a deficit, compute required supplemental releases
      &		                          Avail_Cap_Year)
 				                !Assign the potential guage flow
 				                gagesrcflow=min(Temp_STEP_DEFICIT(NN),
-     &	 			                  potqinn(s_node))	    
+     &	 			                  potqinn(s_node))
+     	                          gagesrcflow=max(gagesrcflow,0.)  !Added by Evgenii 120214 to prevent from going negative
  				                !Reduce temp_step_deficit to reflect potential guage contribution
  				                Temp_STEP_DEFICIT(NN)=Temp_STEP_DEFICIT(NN)
-     & 				                  -potqinn(s_node)
+     & 				                  -gagesrcflow !potqinn(s_node)
+				                Temp_STEP_DEFICIT(NN)=max(Temp_STEP_DEFICIT(NN),0.) !Added by Evgenii 120214 to prevent from going negative
 				                potqinn(s_node)=potqinn(s_node)-gagesrcflow
 				                potqinn(s_node)=max(potqinn(s_node),0.0)	
 				                !Accumulate the total expected inflow into the link resulting from gauge source contribution (to make sure capacity is obeyed)
@@ -718,9 +720,6 @@ C           If a deficit, compute required supplemental releases
 				 ENDDO
                    TOT_SUPL_R(NN) = TOT_SUPL_R(NN) + STEP_DEFICIT(NN)
                    NonPropSTEP_DEFICIT(NN)=STEP_DEFICIT(NN)
-                   if (nodeid(nn)==107) then
-                   continue
-                   end if 
 				END IF !End if Step Deficit
           END IF !End if demand node	
       ENDDO   
