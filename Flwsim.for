@@ -97,7 +97,7 @@ C    Functions:
 C
 C    Local variables:
       INTEGER*4 I, NX, NN, LI, LN, LO, ST, OUT,ioutnodes,ioutLinks,
-     1          SEQ_NOD(NODMAX), J, NI, NO, InflowDay,STEP
+     1           J, NI, NO, InflowDay,STEP   !SEQ_NOD(NODMAX),
       REAL*4    DINFLW(NODMAX), DSTO(NODMAX), DTREL(NODMAX),AW(NODMAX),
      1          SUPL_RELEAS(NODMAX), TOT_SUPL_R(NODMAX),potqinn(nodmax)
       REAL*4    DS, InStor, OutStor, REL,PotSrcRel(NODMAX)
@@ -112,13 +112,13 @@ C    Local variables:
 
 C     Initialize system power variable
       SYSPWR = 0.
-
+!Evgenii 120215 moved commented lines below to so that they do not occur at every timestep
 C     Build an array which gives the simulation sequence order.
-      DO I = 1, TNODES
-        DO J = 1, TNODES
-          IF(NODSEQ(J).EQ.I)SEQ_NOD(I) = J
-        ENDDO
-      ENDDO
+!      DO I = 1, TNODES
+!        DO J = 1, TNODES
+!          IF(NODSEQ(J).EQ.I)SEQ_NOD(I) = J
+!        ENDDO
+!      ENDDO
 C
 C     Initialize total period link flows and energy variables
       DO LN = 1,LINKS
@@ -221,13 +221,11 @@ C       Initialize supplemental releases for this step
 		     end if
         !Compute SUPL_RELEAS(NN),TOT_SUPL_R(NN) from step's deficit and target
 	  call ReleaseFromDeficit(SUPL_RELEAS,TOT_SUPL_R,DSTO,PotSrcRel,       
-     &	  potQINN) 
-       
+     &	  potQINN)   	  
 	  !Obtain lake and reservoir target releases based on beginning of
         !day storages LESS (minimum release requirements, downstream deficit
         !requirements, and supply-driven release rules and balancing functions).
         CALL RELEASE(DSTO,SUPL_RELEAS,DTREL)
-	 
         !Compute evaporation, seepage losses:
         !Update DSTO(NN), TEVAPN(NN), TSEEPL(NN)
         call GetLoss (DSTO)
@@ -313,8 +311,6 @@ C      Define final storage volumes ESTO, convert volume totals to daily rates
 	call StoragePerformance()
 	  !Link Cost calculations at end of time step, added by Evgenii 10713
 	call LinkCost_and_Power()
-
-
 
        DO NN = 1,TNODES
 CMRT941107+

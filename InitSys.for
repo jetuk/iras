@@ -309,6 +309,13 @@
       else
         CALL SetUserSeq()
       end if
+!Evgenii moved these lines below from flwsim.for so that this only occurs 
+C     Build an array which gives the simulation sequence order.
+      DO I = 1, TNODES
+        DO J = 1, TNODES
+          IF(NODSEQ(J).EQ.I)SEQ_NOD(I) = J
+        ENDDO
+      ENDDO      
       
 !     Print out node sequence
       CALL PrintSeq()
@@ -635,6 +642,7 @@ C     Initialize vectors
 		  
 	   ENDDO
          sto_perf_node(node)=.false. !Evgenii 100617
+         !flow_perf_node(node)=.false. !Evgenii 120221
 	   seep_node(node)=.false.   !Evgenii 100617
 	   cons_node(NODE)=.false.   !Evgenii 100617
 	   srcpriorities(node)=.false.
@@ -802,9 +810,10 @@ C     Initialize number of previous routing reservoirs
 !  Local
       INTEGER*4 NN, PT, PP
       INTEGER*4 rDay       !Kang add
+      real*4 rrDay
 !------------------------------------------------------------------------
       rDay = iDay       !Kang add
-      
+      rrDay=real(iDay)
       !Kang modify for improving performance 20100701
       !Here should use TNODES instead of NODMax  
       !do nn = 1, NODMax
@@ -817,6 +826,7 @@ C     Initialize number of previous routing reservoirs
             !Difference between the 1st and 2nd condition??
             if (NodePolicyBeg(PP,PT,NN)>1.0.and.
      &          rDay>= NodePolicyBeg(PP,PT,NN).and.
+     &          rrDay< NodePolicyEnd(PP,PT,NN).and.
      &          NodePolicy0(PT,NN)<PP) then
               NodePolicyChg(PT,NN) = .true.
               NodePolicy0(PT,NN) = PP
@@ -838,6 +848,7 @@ C     Initialize number of previous routing reservoirs
             !Difference between the 1st and 2nd condition??
             if (LinkPolicyBeg(PP,PT,NN)>1.0.and.
      &          rDay >= LinkPolicyBeg(PP,PT,NN).and.
+     &          rrDay< LinkPolicyEnd(PP,PT,NN).and.
      &          LinkPolicy0(PT,NN)<PP) then
               LinkPolicyChg(PT,NN) = .true.
               LinkPolicy0(PT,NN) = PP

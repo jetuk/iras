@@ -217,7 +217,7 @@ C     Arguments:
       REAL*4    RELEASE
 C
 C     Local Variables:
-      INTEGER*4 iGrpResv, ST, I, iNode, iZone, iItem, pp
+      INTEGER*4 iGrpResv, ST, I, iNode, iZone, iItem, pp,nres
       REAL*4    GRP_STORAGE, FRACT_P, FRACT_S, DELTA_STOR
       REAL*4    MIN_REL_I, MIN_STOR_I, MAX_REL_I, MAX_STOR_I,
      1          MIN_REL_F, MIN_STOR_F, MAX_REL_F, MAX_STOR_F
@@ -242,10 +242,12 @@ C     Return with FAIL status if specified site not a rulesite.
        GRP_STORAGE = 0.0
        !DO I = 1, nResvInGrp(iGrpResv) !Evgenii 090728 took out this erroneus do loop, 
 	 !do loop below suffices for GRP_STORAGE calculation
+        nres=0
         do iNode = 1, TNodes
            IF(RuleSite(RuleNode).eq.RuleSite(iNode))THEN
              GRP_STORAGE = GRP_STORAGE + STORAGES(iNode)
-             !exit
+             nres=nres+1
+             if (nres >= nResvInGrp(iGrpResv))exit !Evgenii added to shorten loop run time 120215
            ENDIF
         end do
        !ENDDO
@@ -508,16 +510,17 @@ C     compute the final storages
       step=sysstat(sstep)
       STEPS_LEFT=STEPPRPRD-STEP+1 
 	!Evgenii added line above from 1995 code 090807, +1 becaues this is the beginning of the step.
-      gagesrcflowTS(lnkmax)=0.0 
+      do ln=1,lnkmax !120320 put in do loop (gagesrcflowTS wasnt resetting)
+        gagesrcflowTS(ln)=0.0  
+      end do
 C     Initialize supplemental releases for this step
       DO NN = 1,TNODES
           SUPL_RELEAS(NN) = 0.0
       END DO  
 	DO NN = 1,TNODES
           IF (DMDNODE(NN)) THEN
-		!compute deficits
-				!For storage nodes
-				 
+		        !compute deficits
+				!For storage nodes				 
 				IF (CAPN(NN) .GT. 0.0) THEN     !for storage node
 				!Node with storage: Deficit is diff. between target and storage + release from previous subtime step in the current time-step (+releaseTS(nn) added by Evgenii)
        			  if (step > 1) then	
@@ -539,9 +542,6 @@ C     Initialize supplemental releases for this step
 					end if	 	
 					STEP_DEFICIT(NN) = MAX( 0.0, TOT_DEFICIT(NN)) 
 ! 			        STEP_DEFICIT(NN) = TOT_DEFICIT(NN)/steps_left	
-!					if (trim(nname(nn))=='CR' .and. sysstat(18)==512)then
-!					write(*,*)nname(nn),STEP_DEFICIT(NN)
-!					end if
 				  end if
 				!For non-storage nodes
 				else
@@ -564,21 +564,19 @@ C     Initialize supplemental releases for this step
 					if(EnvFlwNode(NN)) then !Evgenii 100513 Added environmental flow step deficit
 				!Code below is IRAS-2000 code, Evgenii 100301
 				!IRAS 2000 CODE below, doesnt take into accout passive water to reduce deficit	
-					  
 					  STEP_DEFICIT(NN)=(DMD_TARG(NN)-
      & 					  DMD_TARG(NN)*Reduction-QINN(NN))*DAYPERTS
 					  STEP_DEFICIT(NN) = MAX(0.,STEP_DEFICIT(NN))    
 					end if
-
+                    !Now the algorithm that does take into account passive water
 					if (step > 1.and. .not. EnvFlwNode(NN)) then 
 C              Have to wait until after the 1st step before we know what
 C              deficit at site NN was.
-C
 C              Expected "natural" remaining inflow is average over
 C              previous steps of (cumulative inflow - cumulative
 C              supplemental release)*steps left.
-		   	!Natural inflow neglects any attempted extra releases resulting from step-decicits from previous sub-time steps (TOT_SUPL_R), Evgenii 100303
-			!The expected inflow calculation does not yet take into account extra diversion from source demand links 110517 evgenii
+		      !Natural inflow neglects any attempted extra releases resulting from step-decicits from previous sub-time steps (TOT_SUPL_R), Evgenii 100303
+			  !The expected inflow calculation does not yet take into account extra diversion from source demand links 110517 evgenii
 						EXPECT_INFL(nn) = STEPS_LEFT*(INFLOW(NN)-
      &                           TOT_SUPL_R(NN))/(STEP-1)
 						!Evgenii put in line below to prevent expected inflow from going negative 110926
@@ -588,144 +586,126 @@ C              supplemental release)*steps left.
      &						DMD_TARG(NN)*Reduction)*DAYSPRPRD
      &						-INFLOW(NN)- EXPECT_INFL(NN)			
 						TOT_DEFICIT(NN) = MAX( 0.0, TOT_DEFICIT(NN)) 
-				        STEP_DEFICIT(NN) = TOT_DEFICIT(NN)/steps_left
-!					if (trim(nname(nn))=='Ted' .and. sysstat(18)==512)then
-!					!write(*,*)nname(nn),STEP_DEFICIT(NN)
-!					end if
-!                  if (trim(nname(nn))=='Ted' .and. sysstat(18)==505)then
-!                    write(*,901)STEP_DEFICIT(NN),TOT_SUPL_R(NN),
-!     &                   INFLOW(NN),EXPECT_INFL(nn)
-!                  end if
-!901    format (10F10.4)	                  
+				        STEP_DEFICIT(NN) = TOT_DEFICIT(NN)/steps_left                 
 					END IF 					 
-				endif 
-		  		
-
-	!Step_Deficit calculation is ignoring excess water Julien and Evgenii 090810
-
-C           If a demand node, compute required releases for upstream reservoirs.
-C           If a deficit, compute required supplemental releases
-
-
-				IF (STEP_DEFICIT(NN).GT.0.0)THEN 
+				endif 		  		
+	         !Step_Deficit calculation is ignoring excess water Julien and Evgenii 090810
+C              If a demand node, compute required releases for upstream reservoirs.
+C              If a deficit, compute required supplemental releases
+				IF (STEP_DEFICIT(NN).GT.0.0)THEN 				 
 				 Temp_STEP_DEFICIT(NN)=STEP_DEFICIT(NN)				
 				 DO I = 1,SUPLY_PTS(NN)
-					 !Reset TotSrcRelease at the first subtime step needed.
-					 !IF	(SYSSTAT(sstep)==0) TotSrcRelease(I,NN)=0.0	!Evgenii 150711
-					 S_NODE = SUPL_NODE(I,NN)      !SUPL_NODE = {1,...TNodes}, not NodeID
-					     !Set ideal release 
-				     IF (S_NODE.GT.0) THEN		!Evgenii added capn(s_node)>0
-				        !If source node is a non reservoir or lake guage node, reduce the Temp_STEP_DEFICIT by the ammount the gauge can provide, added by Evgenii 120123
-				        if (GageNF(s_node) .and. .not.ResvNode(s_node).and..not.
-     &				       NatLak(s_node))then								          		         				
-		                      check=0
-		                      glink=0
-		                      !If the demand node is directly downstream of supply node
-		                      do LL = 1,TOTOUT(s_node)
-                                 LN = OUTLNK(s_node,LL)
-                                 if (Nout(ln)==nn) then
-                                    check=check+1
-                                    glink=LN
-                                    exit                                
-                                 end if
-                              end do    
-                              !If the demand node is not directly downstream, but link coming out of source gauge is a source link for the demand node
-                              if (check==0) then                        
-		                         do ll = 1,SUPLY_Links_pts(NN)
-		                           if (Nin(SUPL_Link(ll,nn))==s_node)then
-                                    glink=SUPL_Link(ll,nn)
-                                    check=check+1
-                                    exit
-                                   end if
-                                  end do
-                              end if
-                              if (check==1) then
-		                        !Make sure the demand link responsible for taking the flow from the gauge node is limited by its capacity
-		                        AVAIL_CAP = MAX(0.0, CapL(glink)- BQLN(glink)
-     &		                       -gagesrcflowTS(glink))
-		                        Avail_Cap_Year=MAX(0.0, CapLYear(glink)- 
-     &		                       YearQLN(glink)-gagesrcflowTS(glink))
-		                        !Update potential contribution from this guage node taking into account annual and TS capacities
-		                        potqinn(s_node)=MIN(potqinn(s_node),AVAIL_CAP,
-     &		                          Avail_Cap_Year)
-				                !Assign the potential guage flow
-				                gagesrcflow=min(Temp_STEP_DEFICIT(NN),
-     &	 			                  potqinn(s_node))
-     	                          gagesrcflow=max(gagesrcflow,0.)  !Added by Evgenii 120214 to prevent from going negative
- 				                !Reduce temp_step_deficit to reflect potential guage contribution
- 				                Temp_STEP_DEFICIT(NN)=Temp_STEP_DEFICIT(NN)
-     & 				                  -gagesrcflow !potqinn(s_node)
-				                Temp_STEP_DEFICIT(NN)=max(Temp_STEP_DEFICIT(NN),0.) !Added by Evgenii 120214 to prevent from going negative
-				                potqinn(s_node)=potqinn(s_node)-gagesrcflow
-				                potqinn(s_node)=max(potqinn(s_node),0.0)	
-				                !Accumulate the total expected inflow into the link resulting from gauge source contribution (to make sure capacity is obeyed)
-				                gagesrcflowTS(glink)=gagesrcflowTS(glink)
-     &				                +gagesrcflow   	       
-		                       end if				              
-				              cycle
-				        end if 			        				          			        					    
+					 SrcRelease=0
+					 !TotSrcRelease restes to 0 at at the first subtime step in flwsim.for.
+				  IF(SYSSTAT(sstep)==0) TotSrcRelease(I,NN)=0.0	!Evgenii 150711
+				    S_NODE = SUPL_NODE(I,NN)    !SUPL_NODE = {1,...TNodes}, not NodeID
+				    IF (S_NODE.GT.0) THEN	
+				      !If source node is a non reservoir or lake guage node, reduce the Temp_STEP_DEFICIT by the ammount the gauge can provide, added by Evgenii 120123
+				      if (GageNF(s_node) .and. .not.ResvNode(s_node).and..not.
+     &				    NatLak(s_node))then								          		         				
+		                check=0
+		                glink=0
+		                !If the demand node is directly downstream of supply node
+		                do LL = 1,TOTOUT(s_node)
+                           LN = OUTLNK(s_node,LL)
+                           if (Nout(ln)==nn) then
+                              check=check+1
+                              glink=LN
+                              exit                                
+                           end if
+                        end do    
+                       !If the demand node is not directly downstream, but link coming out of source gauge is a source link for the demand node
+                       if (check==0) then                        
+		                 do ll = 1,SUPLY_Links_pts(NN)
+		                   if (Nin(SUPL_Link(ll,nn))==s_node)then
+                             glink=SUPL_Link(ll,nn)
+                             check=check+1
+                             exit
+                           end if
+                         end do
+                       end if
+                       if (check==1) then
+		               !Make sure the demand link responsible for taking the flow from the gauge node is limited by its capacity
+		               !Capacities for gauge sources are set by the Link capacity, not in the source lines!!!
+		               AVAIL_CAP = MAX(0.0, CapL(glink)- BQLN(glink)
+     &		                     -gagesrcflowTS(glink))
+		               Avail_Cap_Year=MAX(0.0, CapLYear(glink)- 
+     &		                     YearQLN(glink)-gagesrcflowTS(glink))
+		               !Update potential contribution from this guage node taking into account annual and TS capacities
+		               potqinn(s_node)=MIN(potqinn(s_node)*
+     &		                   SUPL_FRAC(I,NN),AVAIL_CAP,Avail_Cap_Year)
+				       !Assign the potential guage flow
+				       gagesrcflow=min(Temp_STEP_DEFICIT(NN),potqinn(s_node))     
+                       gagesrcflow=max(gagesrcflow,0.)  !Added by Evgenii 120214 to prevent from going negative
+		               !Reduce temp_step_deficit to reflect potential guage contribution
+		               Temp_STEP_DEFICIT(NN)=Temp_STEP_DEFICIT(NN)
+     & 	                   -gagesrcflow !potqinn(s_node)
+		               Temp_STEP_DEFICIT(NN)=max(Temp_STEP_DEFICIT(NN),0.) !Added by Evgenii 120214 to prevent from going negative
+		               potqinn(s_node)=potqinn(s_node)-gagesrcflow
+		               potqinn(s_node)=max(potqinn(s_node),0.0)	
+		               !Accumulate the total expected inflow into the link resulting from gauge source contribution (to make sure capacity is obeyed)
+		               gagesrcflowTS(glink)=gagesrcflowTS(glink)
+     &  			               +gagesrcflow   	       
+		               end if				              
+		               cycle
+		              end if !End (GageNF(s_node) .and. .not.ResvNode(s_node)etc..
 					    
-					    !For reservoir sources
-					    SrcRelease=SUPL_FRAC(I,NN)*Temp_STEP_DEFICIT(NN)
-				     END IF
-					     !Evgenii 150711 added SrcRelease 
-					     !Evgenii 150711 added if below 
-					     !if Trail_Release brings the source over its cumulative maximum time-step contribution
-					     !reduce Trail_Release so that it brings the contribution to the maximum
-				    if(MaxOutTS(I,NN)>=0.0) then
-      				     AvailTSRel=max((MaxOutTS(I,NN)-TotSrcRelease(I,NN)),0.0)	     
-      				     SrcRelease=min(SrcRelease,AvailTSRel)
-				    end if 
- 				    if(MaxOutYear(I,NN)>=0.0) then
-      				  if((AnnualOut(I,NN)+SrcRelease)>MaxOutYear(I,NN))then
-      				    continue
-      				   end if
-      				     AvailYearRel=max((MaxOutYear(I,NN)-AnnualOut(I,NN)),0.0)	     
-      				     SrcRelease=min(SrcRelease,AvailYearRel)
-				    end if                    
-!				     IF (SrcRelease+TotSrcRelease(I,NN)>
-!     &					     (MaxOut(I,NN)*DAYSPRPRD))THEN     					
-! 					         SrcRelease=MaxOut(I,NN)*DAYSPRPRD-TotSrcRelease(I,NN)
-!				     END IF
-					     					         					       					     					   
-					   !Now reduce deficit by what you think the reservior can release which is its maximum release rate at its current volume
-					   !or its current volume
-				     SrcRelease=max(0.0,SrcRelease)							    					     										 
-				     SUPL_RELEAS(S_NODE)=SUPL_RELEAS(S_NODE)+SrcRelease
-                     !Evgenii 150711 changed SUPL_FRAC(I,NN)*STEP_DEFICIT(NN) to SrcRelease 
-				     TotSrcRelease(i,nn)=TotSrcRelease(i,nn)+SrcRelease !SUPL_FRAC(I,NN)*STEP_DEFICIT(NN)         				         				 
-                     AnnualOut(i,nn)=AnnualOut(i,nn)+SrcRelease 
-                     !Set OrigTemp_STEP_DEFICIT which will be used later after Temp_STEP_DEFICIT is modified
-                        				 
-         			!Evgenii- Need to write check to make sure sources that use priorities are never also used with 
-         			!contribution factors	 
-         			 
-         			 !In the case of source priorities
-         			 if (srcpriorities(nn)==.true.) then
-         			     OrigTemp_STEP_DEFICIT=Temp_STEP_DEFICIT(NN)  
-         			     !Reduce Temp_STEP_DEFICIT by the amount that the reservior can release 
-       				     Temp_STEP_DEFICIT(NN)=Temp_STEP_DEFICIT(NN)
-     &        				 -PotSrcRel(S_node) !*SUPL_FRAC(I,NN)
-                         !Make sure it doesnt go below 0
-                         Temp_STEP_DEFICIT(NN)=
-     &                   max(0.0,Temp_STEP_DEFICIT(NN))
-                         !Step_Def_diff is how much of last subtime step's release went to node nn
-                         Step_Def_diff=OrigTemp_STEP_DEFICIT
-     &                      -Temp_STEP_DEFICIT(NN)
-         
-     				         !How much of last subtime steps do we have left for lower priority nodes
-     				         PotSrcRel(S_node)=PotSrcRel(S_node)-Step_Def_diff	  		
-				         !Here add the code to limit SUPL_RELEAS                                         
-                     end if
+				     !For reservoir sources			   
+			         if (.not. GageNF(s_node)) then					    
+					   !Evgenii 150711 added SrcRelease 
+					   SrcRelease=0.0
+					   SrcRelease=SUPL_FRAC(I,NN)*Temp_STEP_DEFICIT(NN)
+			         			     				  	     
+		               !Evgenii 150711 added if below 
+		               !if Trail_Release brings the source over its cumulative maximum time-step contribution
+		               !reduce Trail_Release so that it brings the contribution to the maximum
+	                 if(MaxOutTS(I,NN)>=0.0) then
+		                 AvailTSRel=max((MaxOutTS(I,NN)-TotSrcRelease(I,NN))
+     &		                 ,0.0)
+		                 SrcRelease=min(SrcRelease,AvailTSRel)
+	                 end if 
+	                 if(MaxOutYear(I,NN)>=0.0) then
+			            AvailYearRel=max((MaxOutYear(I,NN)-AnnualOut(I,NN)),0.0)
+      			        SrcRelease=min(SrcRelease,AvailYearRel)
+				       end if                    
+                      !IF (SrcRelease+TotSrcRelease(I,NN)>
+!     &			       (MaxOut(I,NN)*DAYSPRPRD))THEN     					
+! 			           SrcRelease=MaxOut(I,NN)*DAYSPRPRD-TotSrcRelease(I,NN)
+!	      	      END IF					     					         					       					     					   
+		             !Now reduce deficit by what you think the reservior can release which is its maximum release rate at its current volume
+		             !or its current volume
+	                SrcRelease=max(0.0,SrcRelease)							    		
+	                SUPL_RELEAS(S_NODE)=SUPL_RELEAS(S_NODE)+SrcRelease
+                      !Evgenii 150711 changed SUPL_FRAC(I,NN)*STEP_DEFICIT(NN) to SrcRelease 
+	                TotSrcRelease(i,nn)=TotSrcRelease(i,nn)+SrcRelease !SUPL_FRAC(I,NN)*STEP_DEFICIT(NN)
+                      AnnualOut(i,nn)=AnnualOut(i,nn)+SrcRelease 
+                      !Set OrigTemp_STEP_DEFICIT which will be used later after Temp_STEP_DEFICIT is modified                 				 
+		              !Evgenii- Need to write check to make sure sources that use priorities are never also used with contribution factors	        			 
+         		      !In the case of source priorities
+         		      if (srcpriorities(nn)==.true.) then
+        		       OrigTemp_STEP_DEFICIT=Temp_STEP_DEFICIT(NN)  
+         		       !Reduce Temp_STEP_DEFICIT by the amount that the reservior can release 
+       			       Temp_STEP_DEFICIT(NN)=Temp_STEP_DEFICIT(NN)
+     &     				 -PotSrcRel(S_node) !*SUPL_FRAC(I,NN)
+                       !Make sure it doesnt go below 0
+                       Temp_STEP_DEFICIT(NN)=
+     &                 max(0.0,Temp_STEP_DEFICIT(NN))
+                       !Step_Def_diff is how much of last subtime step's release went to node nn
+                       Step_Def_diff=OrigTemp_STEP_DEFICIT
+     &                    -Temp_STEP_DEFICIT(NN)         
+     				       !How much of last subtime steps do we have left for lower priority nodes
+     				       PotSrcRel(S_node)=PotSrcRel(S_node)-Step_Def_diff	  		
+				       !Here add the code to limit SUPL_RELEAS                        
+                      end if
+                     end if	!end if not gauge node          
+                    END IF !end if S_NODE>0 
 				 ENDDO
                    TOT_SUPL_R(NN) = TOT_SUPL_R(NN) + STEP_DEFICIT(NN)
                    NonPropSTEP_DEFICIT(NN)=STEP_DEFICIT(NN)
 				END IF !End if Step Deficit
           END IF !End if demand node	
-      ENDDO   
+      ENDDO        
 	end subroutine
-
-
 !*************************************************************************
        subroutine PotentialStoSourceRel(Storages,PotSrcRel,potQINN,
      &       success) 
@@ -787,7 +767,7 @@ C           If a deficit, compute required supplemental releases
 	  else if (GageNF(nn)) then
 	       potqinn(nn)=qinn(nn)* DayPerTS  !Potential time step release to a demand node if gauge is a source, Evgenii 120124
 	  end if	  	  	
-	end do
+	end do	
 25	success=.true.	   
 35    continue
       return

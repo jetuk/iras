@@ -155,6 +155,7 @@ C      Local Variables:
 
 !------------------------------------------------------------------------
       
+      ioutSeq=35
       OPEN(UNIT=ioutSeq, FILE='seq.out',STATUS='replace') 
       do i=1,tnodes
         write(ioutSeq, fmt=10)NodeID(NodSeq(i)),nname(NodSeq(i))
@@ -184,14 +185,14 @@ C
       INCLUDE 'LINK.INC'
 C
 C      Local Variables:
-       INTEGER*4   userID(nodmax),ioutSeq,i,j,LineCounter
+       INTEGER*4   userID(nodmax),iINSeq,i,j,LineCounter
        logical*1 success,CountFileLines
 !------------------------------------------------------------------------
-      
-      OPEN(UNIT=ioutSeq, FILE='iras.seq',STATUS='old') 
-      IF(.NOT. CountFileLines(ioutSeq, LineCounter)) GOTO 999 
+      iINSeq=54
+      OPEN(UNIT=iINSeq, FILE='iras.seq',STATUS='old') 
+      !IF(.NOT. CountFileLines(ioutSeq, LineCounter)) GOTO 999 
       do i=1,tnodes
-        read(ioutSeq, *)userID(i)
+        read(iINSeq, *)userID(i)
       end do
       do i=1,tnodes
         do j=1,tnodes
@@ -201,7 +202,7 @@ C      Local Variables:
         end do
       end do
       success=.true.
-999   close (ioutSeq)      
+999   close (iINSeq)      
       if (.not.success) then
         write(*,*)'The number of nodes in the iras.seq file do not 
      &    match the number of nodes in the iras.inp file'

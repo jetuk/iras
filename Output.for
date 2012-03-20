@@ -619,18 +619,18 @@
 		seep(i)='Seepage'
 		enddo
 		write(ioutnodests,FMT=11,advance='no')     !Write the output category                 
+     &	(begsto(i),i=1,t_storage),(endsto(i),i=1,t_storage), 
      &	(flowin(i),inflowst(i),outflow(i),outflowTS(i),i=1,tnodes),
      &	(gagein(i),i=1,t_gage),  
-     &	(begsto(i),i=1,t_storage),(endsto(i),i=1,t_storage), 
      &	(cons(i),i=1,t_cons),(evap(i),i=1,tevap_nodes),		
      &	(seep(i),i=1,tseep)
 		write(ioutnodests,*)
 		
 		write(ioutnodests,FMT=10,advance='no')'Day ','step', !Write the name of node
+     &	(storage_Name(i),i=1,t_storage),(storage_Name(i),i=1,t_storage),
      &	(NName(i),NName(i),NName(i),NName(i),i=1,tnodes),
-     &	(Gage_Name(i),i=1,t_gage),
-     &	(storage_Name(i),i=1,t_storage),
-     &	(storage_Name(i),i=1,t_storage),(cons_name(i),i=1,t_cons),	
+     &  (Gage_Name(i),i=1,t_gage)    
+     &	,(cons_name(i),i=1,t_cons),	
      &	(evap_name(i),i=1,tevap_nodes),(seep_name(i),i=1,tseep)
 		
 		write(ioutnodests,*)
@@ -638,10 +638,10 @@
 	
 
 	write(ioutnodests,FMT=9,advance='no')sysstat(nday),step, !Write the data for each day 
-     &	(inflowconv(i),inflowtsconv(i),TOTRELconv(i),
-     &	 DTRELconv(i),i=1,tnodes),
-     &  (gage(i),i=1,t_gage),(storage_beg(i),i=1,t_storage),
-     &	(storage_end(i),i=1,t_storage),(consump(i),i=1,t_cons),
+     &	(storage_beg(i),i=1,t_storage),(storage_end(i),i=1,t_storage),
+     &	 (inflowconv(i),inflowtsconv(i),TOTRELconv(i),
+     &  DTRELconv(i),i=1,tnodes),(gage(i),i=1,t_gage),
+     &	(consump(i),i=1,t_cons),
      &	(tevap(i),i=1,tevap_nodes),(seepage(i),i=1,tseep)
 	
 	write(ioutnodests,*)

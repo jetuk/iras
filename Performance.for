@@ -46,24 +46,23 @@
 	end if
 	DO NN = 1, TNODES
 	 IF(sto_perf_node(nn)) THEN  !must initialize sto_perf_node(nn) as false
-		 do i=1,perf_pts(nn)			
 		   !For storage nodes- If current storage less than record minimum (in percentage)
-		   if (capn(nn)>0.0) then 
-			   min_store_reach(nn)=
-     &			min(min_store_reach(nn),esto(nn)/CAPN(NN))
+		 if (capn(nn)>0.0) then 
+			  min_store_reach(nn)=
+     &		    min(min_store_reach(nn),esto(nn)/CAPN(NN))
 		   	   
-			   min_store_reach(nn)=
+			  min_store_reach(nn)=
      &			max(min_store_reach(nn),0.0)
 
 		   !For flow nodes (in percentage)
-		   else 
-			   min_store_reach(nn)=
+		 else 
+			  min_store_reach(nn)=
      &			min(min_store_reach(nn),inflow(nn)/DMD_TS(nn))
-			   min_store_reach(nn)=
+			  min_store_reach(nn)=
      &			max(min_store_reach(nn),0.0)
 		  
-		   end if	  
-		  
+		 end if	 
+		 do i=1,perf_pts(nn)			
 		   !if below threshold for both storage and flow target nodes set infailure to true		   
 		   infailure=.false.
 		   if(capn(nn)>0.0 .and. 
@@ -96,7 +95,7 @@
 				failure(i,nn)=.true.
 				!increase count of total reservoir failure (for the whole run)
 				nTime_Steps_Tot(i,nn)=nTime_Steps_Tot(i,nn)+1
-				!start count for duration of specific failure
+				!increase count for duration of specific failure
 				nTime_Steps(i,nn)=nTime_Steps(i,nn)+1
 			 end if
 	  !if above threshold
@@ -342,7 +341,7 @@
 			reliability(i,nn)=1- nAnnualFailreal/years 
             !Time step reliability 
             reliabilityTS(i,nn)=1 - real(nTime_Steps_Tot(i,nn))
-     &         /sysstat(nrec) 
+     &         /real(sysstat(nrec))
 			if (nStoreFail(i,nn)>0) then
 				!Must use dummy real variable to convert integers into reals before doind division
 				nTime=nTime_Steps_Tot(i,nn)
@@ -370,12 +369,13 @@
      &			'Total Failures for Threshold',
      &			'Ave. Time Steps in Failures',
      &	    	'Max Time Spent in Failure',
+     &          'Total Time Spent in Failure',
      &			'Annual Reliability',
      &          'Time Step Reliability'
 			do j=1,perf_pts(nn)
 				 write(UNIT=ioutperf,FMT=11)
      &			 j,nStoreFail(j,nn),ave_sto_fail(j,nn)				
-     &             ,max_sto_fail_dur(j,nn),
+     &             ,max_sto_fail_dur(j,nn),nTime_Steps_Tot(j,nn),
      &			 reliability(j,nn),reliabilityTS(j,nn)
 			end do
 		end if
@@ -460,7 +460,7 @@
 	close(unit=ioutperf)
 9     FORMAT(A30,A30,F30.2)
 10    FORMAT(A30,45A30)
-11	FORMAT(I30,I30,F30.2,I30,2F30.3)
+11	FORMAT(I30,I30,F30.2,2I30,2F30.3)
 12	FORMAT(A30,4A30)
 13    FORMAT(A30,4F30.2)
 14	FORMAT(A30,6A30)

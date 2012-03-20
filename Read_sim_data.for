@@ -2020,7 +2020,11 @@ C  for Hydropower/pump
      &          pPerformance(L)%NodeID==IDNode)then
             n = n + 1
             thres_limit(n,node) = pPerformance(L)%thres_limit
+            !if (capn(node)>0.0) then
             sto_perf_node(node) = .true.
+           ! else
+             !   flow_perf_node(node) = .true.
+            !end if
             if (n >= thres_pts_max) exit
           END IF
         END DO

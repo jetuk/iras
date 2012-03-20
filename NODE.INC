@@ -18,7 +18,7 @@ C     node number associated with sequence index NX.
       logical cons_node(NODMAX), seep_node(NODMAX),maxflow(nodmax) !Evgenii 090717
 	  !Total gage and storage nodes Evgenii 090717
 C    NODSEQ = vector of node sequencing ( use RD_FND(SYSGRP,NNSEQ, ) )
-      INTEGER*4  NODSEQ(NODMAX)
+      INTEGER*4  NODSEQ(NODMAX),SEQ_NOD(NODMAX)
 C
 C
 C  ************************* HYDROPOWER  *****************************
@@ -104,7 +104,7 @@ C
       COMMON /GAGE_1/NGAUGE, GAGEND
 C
       COMMON/SYSTEM_1/TNODES,NODES,LINKS,SYSPWR,NodSeq,cons_node, 
-     1				seep_node,tDemSeries
+     1				seep_node,tDemSeries,SEQ_NOD
 
 !
 C+IRAS/RPA+IRAS/RPA+IRAS/RPA+IRAS/RPA+IRAS/RPA+IRAS/RPA+IRAS/RPA+IRAS/RPA
@@ -205,6 +205,7 @@ C
  
 !Storage node performance variables
 	logical:: sto_perf_node(nodmax),last_T_fail(thres_pts_max,nodmax)
+	!logical*1 flow_perf_node(nodmax)
 	real:: thres_limit(thres_pts_max,nodmax),min_store_reach(nodmax)  
 	INTEGER*4 perf_pts(nodmax),nStoreFail(thres_pts_max,nodmax),
      &		  nTime_Steps_Tot(thres_pts_max,nodmax),
@@ -224,7 +225,7 @@ C
 !  Common 
 	COMMON /Performance/ sto_perf_node,last_T_fail,thres_limit,
      &	min_store_reach,perf_pts,nStoreFail,nTime_Steps_Tot,
-     &	max_sto_fail_dur,nTime_Steps,minYearSD
+     &	max_sto_fail_dur,nTime_Steps,minYearSD !,flow_perf_node
 
 	COMMON /DemRed/ DemSourceID, Dem_Thres_limit, DemRedAmt,
      &				DemRed_node,DemRedPts	 
