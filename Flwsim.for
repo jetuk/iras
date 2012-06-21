@@ -287,8 +287,8 @@ C       Now all nodes and links have been simulated: Accumulated BQLN, EQLN
         ENDDO
 
 	!   EVGENII - Activate below for diagnostic sub-time step OUTPUT
-!        call DayOutputNodeTS(iDay,step,DSTO,DTREL) 
-!	  call DayOutputLinkTS(iDay,step) 
+        !call DayOutputNodeTS(iDay,step,DSTO,DTREL) 
+	  !call DayOutputLinkTS(iDay,step) 
 	  
 	 ENDDO !End do for all steps per period !Evgenii
 C
@@ -664,7 +664,7 @@ C                    If out node has storage, adjust by deficit
 		           !Evgenii changed STEP_DEFICIT below to TMP_DEFICIT 100127
 				   !so that TMP_DEFICIT can be adjusted below w/o adjusting STEP_DEFICIT
 				   !Evgenii 100702 put ADJ = STEP_DEFICIT(out) in if loop to allow for demand links not connected to demand nodes to work
-				   if (DMDNODE(out) .and. STEP_DEFICIT(out)>0.0) then
+				   if (DMDNODE(out) .and. STEP_DEFICIT(out)>0.0) then   
 				     ADJ = STEP_DEFICIT(out) !TMP_DEFICIT(OUT)
 				   !Evgenii- If downstream node not a demand node, but this demand link is defined as a source link 
 				   !(from source: line in iras.inp) for a demand node that is not directly downstream
@@ -715,6 +715,7 @@ C          surplus of water to this node.)
 				  !would pick up deficit reduction from allocation
 				  if (DMDNODE(out)) then
 					STEP_DEFICIT(out)=STEP_DEFICIT(out) -ADJ
+					STEP_DEFICIT(out)=max(STEP_DEFICIT(out),0.0) !Evgenii 220311 made sure STEP_DEFICIT(out) never goes below 0
                   end if
 				  
 				  !Reduce step deficit of demand nodes

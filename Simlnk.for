@@ -14,7 +14,7 @@ C                 Real*4      QIN - Link inflow,
 C                 IMPLICIT INPUTS:
 C                  Capacity of the link (CAPL),
 C                  Current within-year period (SYSSTAT(T)),
-C                  Link flow-loss function for current period,
+C                  Link flow-function for current period,
 C                  If routing:
 C                   Sub-link storage volumes at beginning of simulation step.
 C                   Routing coefficients (CI, CL, CN)
@@ -244,6 +244,7 @@ C
 !  After routing, compute:
 !  Width, Depth and Velocity of flow in Link
 !  Authors: DPL, HCZ        May 29, 2000
+!           APH            120514   
       IMPLICIT NONE
       INCLUDE 'IRAS_SYS.INC'
       INCLUDE 'NODE.INC'
@@ -260,6 +261,8 @@ C
 !  Local
       INTEGER*4 ST
       REAL*4  LWidth, ADJFLW
+      REAL*4  FLOW_ARRAY(IAGMAX), EVAP_ARRAY(IAGMAX)      !Anthony added 120514
+      INTEGER*4  n                        !Anthony added 120514
 !-------------------------------------------------------------------------
       EVAPLN = 0.
       ADJFLW = QIN / DayPerTS   !10^6 m^3/time-step -> 10^6 m^3/day: for intepolation
@@ -271,7 +274,15 @@ C         time step's link loss
             IF (LEVAP_PTS(LINK) .EQ. 1) THEN
               EVAPLN = LINK_EVAP(1,LINK)
             ELSE
-              ST = FINTERP( 1, LINK_FLOW(1,LINK), LINK_EVAP(1,LINK),
+              FLOW_ARRAY = 0.         !Anthony added 120514
+              EVAP_ARRAY = 0.         !Anthony added 120514
+              
+              do n=1,LEVAP_PTS(LINK)                  !Anthony added 120514
+              FLOW_ARRAY(n) = LINK_FLOW(n,LINK)       !Anthony added 120514
+              EVAP_ARRAY(n) = LINK_EVAP(n,LINK)       !Anthony added 120514
+              enddo
+              
+              ST = FINTERP( 1, FLOW_ARRAY, EVAP_ARRAY,        !Anthony amended 120514
      1                  LEVAP_PTS(LINK),ADJFLW, EVAPLN )
             END IF
 C           Convert flow user unit to internal unit: 10^6 m^3/day -> 10^6 m^3/time-step
@@ -296,4 +307,5 @@ C           Convert flow user unit to internal unit: 10^6 m^3/day -> 10^6 m^3/ti
       end select
 
       END subroutine
-
+      
+ 

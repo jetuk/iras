@@ -510,7 +510,7 @@ C     compute the final storages
       step=sysstat(sstep)
       STEPS_LEFT=STEPPRPRD-STEP+1 
 	!Evgenii added line above from 1995 code 090807, +1 becaues this is the beginning of the step.
-      do ln=1,lnkmax !120320 put in do loop (gagesrcflowTS wasnt resetting)
+      do ln=1,links !120320 put in do loop (gagesrcflowTS wasnt resetting)
         gagesrcflowTS(ln)=0.0  
       end do
 C     Initialize supplemental releases for this step
@@ -592,13 +592,13 @@ C              supplemental release)*steps left.
 	         !Step_Deficit calculation is ignoring excess water Julien and Evgenii 090810
 C              If a demand node, compute required releases for upstream reservoirs.
 C              If a deficit, compute required supplemental releases
-				IF (STEP_DEFICIT(NN).GT.0.0)THEN 				 
+				IF (STEP_DEFICIT(NN).GT.0.0)THEN 				 		 
 				 Temp_STEP_DEFICIT(NN)=STEP_DEFICIT(NN)				
 				 DO I = 1,SUPLY_PTS(NN)
 					 SrcRelease=0
 					 !TotSrcRelease restes to 0 at at the first subtime step in flwsim.for.
 				  IF(SYSSTAT(sstep)==0) TotSrcRelease(I,NN)=0.0	!Evgenii 150711
-				    S_NODE = SUPL_NODE(I,NN)    !SUPL_NODE = {1,...TNodes}, not NodeID
+				    S_NODE = SUPL_NODE(I,NN)    !SUPL_NODE = {1,...TNodes}, not NodeID                
 				    IF (S_NODE.GT.0) THEN	
 				      !If source node is a non reservoir or lake guage node, reduce the Temp_STEP_DEFICIT by the ammount the gauge can provide, added by Evgenii 120123
 				      if (GageNF(s_node) .and. .not.ResvNode(s_node).and..not.
@@ -651,7 +651,7 @@ C              If a deficit, compute required supplemental releases
 		              end if !End (GageNF(s_node) .and. .not.ResvNode(s_node)etc..
 					    
 				     !For reservoir sources			   
-			         if (.not. GageNF(s_node)) then					    
+			         if (.not. GageNF(s_node)) then		!Evgenii 210312, so g			    
 					   !Evgenii 150711 added SrcRelease 
 					   SrcRelease=0.0
 					   SrcRelease=SUPL_FRAC(I,NN)*Temp_STEP_DEFICIT(NN)
@@ -697,9 +697,10 @@ C              If a deficit, compute required supplemental releases
      				       PotSrcRel(S_node)=PotSrcRel(S_node)-Step_Def_diff	  		
 				       !Here add the code to limit SUPL_RELEAS                        
                       end if
-                     end if	!end if not gauge node          
+                     end if	!end if not gauge node                                                
                     END IF !end if S_NODE>0 
-				 ENDDO
+				 ENDDO                                     
+
                    TOT_SUPL_R(NN) = TOT_SUPL_R(NN) + STEP_DEFICIT(NN)
                    NonPropSTEP_DEFICIT(NN)=STEP_DEFICIT(NN)
 				END IF !End if Step Deficit
@@ -763,9 +764,10 @@ C              If a deficit, compute required supplemental releases
                PotSrcRel(nn) = MAX(0.0,MAX_RELTS-TOTREL(nn)) !TOTREL is cumulative release upto this subtime step,Max_Q is i mil mil m3/time step
             endif
              PotSrcRel(nn) = min(Storages(nn),PotSrcRel(nn))
-	  
+	       PotSrcRel(nn) = max(PotSrcRel(nn),0.0)
 	  else if (GageNF(nn)) then
 	       potqinn(nn)=qinn(nn)* DayPerTS  !Potential time step release to a demand node if gauge is a source, Evgenii 120124
+	       potqinn(nn)=max(potqinn(nn),0.0)
 	  end if	  	  	
 	end do	
 25	success=.true.	   

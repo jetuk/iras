@@ -1530,7 +1530,7 @@ C
      		        end if	    
      		        if(MaxOutYear(n,node)>=0.0) then
      		            call UnitConversion(1,UFlow,MaxOutYear(n,Node)) !Converts to Mm3/day 
-     		            MaxOutYear(n,node)=MaxOutYear(n,node)*365	!Converts to Mm3/year
+     		            MaxOutYear(n,node)=MaxOutYear(n,node)*365.0	!Converts to Mm3/year
      		        end if
 		    else if(pSource(L)%Source_Type==2) then
 		        m = m + 1		        

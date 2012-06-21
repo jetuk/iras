@@ -104,7 +104,7 @@
           !call UndoUnitConversion(1,uFlow,unallocated(nn))
 	enddo	
 
-	if (iday==1) then 
+	if (sysstat(nday)==1) then 
 		do i=1,tnodes
 		flowin(i)='Inflow';outflow(i)='Outflow';unallC(i)='unAll_flow'
 		enddo
@@ -252,7 +252,7 @@
 				velocity(k4)=LastVelocity(i)
 		endif	
 	enddo	
-	if (iday==1) then  !Initialize column names	
+	if (sysstat(nday)==1) then  !Initialize column names	
 		do i=1,links
 		begflow(i)='Beg_Flow'
 		enddo
@@ -417,7 +417,7 @@
 				velocity(k4)=LastVelocity(i)
 		endif	
 	enddo	
-	if (iday==1 .and. step==1) then  !Initialize column names	
+	if (sysstat(nday)==1 .and. step==1) then  !Initialize column names	
 		do i=1,links
 		begflow(i)='Beg_Flow'
 		begflowTS(i)='Beg_FlowTS'
@@ -592,7 +592,7 @@
 		endif
 	enddo	
 
-	if (iday==1 .and. step==1) then 
+	if (sysstat(nday)==1 .and. step==1) then 
 		do i=1,tnodes
 		    flowin(i)='Inflow';outflow(i)='Outflow';inflowst(i)='Inflow_TS'
 		    outflowTS(i)='OutflowTS'

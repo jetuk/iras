@@ -309,10 +309,10 @@ C
 		OPEN(UNIT=iOutNodes,FILE=trim(NodesFileName),STATUS='replace') 
 		!EVGENII - Activate four lines below (and calls for DayOutputNodeTS and DayOutputLinkTS
 !	towards end of FLWSIM in flwsim.for) for diagnostic sub-time step OUTPUT
-!	  ioutnodests=32
-!	  ioutlinksts=33                                                
-!	  OPEN(UNIT = iOutnodesTS, FILE ="NodesTS.out", STATUS='replace') 
-!	  OPEN(UNIT = iOutlinksTS, FILE ='LinksTS.out', STATUS='replace') 
+	  ioutnodests=32
+	  ioutlinksts=33                                                
+	  OPEN(UNIT = iOutnodesTS, FILE ="NodesTS.out", STATUS='replace') 
+	  OPEN(UNIT = iOutlinksTS, FILE ='LinksTS.out', STATUS='replace') 
 !		!For date debugging
 		!OPEN(UNIT=200,FILE=trim('debug.txt'),STATUS='replace')
 		

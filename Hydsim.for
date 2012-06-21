@@ -101,7 +101,7 @@ C     if HEADFLOW is negative => pumping.
          !internal units of power & energy: kilowatt & kilowatt.hours
          !DENERGY = 0.002725*ECONST(LINK)*DHEAD*LNKFLO2 
 	   !Evgenii 090818, should 0.002725 not be 2725 since 9.81/3600=.002725 is for flow in m3/s, but we have 10^6 m3/s, so its .00275 *10^6
-		DENERGY = ECONST(LINK)*2725*DHEAD !This is kWh, Evgenii changed 0.002725 to 2725 
+		DENERGY = ECONST(LINK)*2725*DHEAD*LNKFLO2  !This is kWh, Evgenii changed 0.002725 to 2725 
 	!------------------------------------------------------
 	ELSE !pump
          if (pumplink(link)) !Evgenii  if (pumplink(link))THEN 100713
