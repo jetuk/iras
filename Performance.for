@@ -178,7 +178,7 @@
 		 !annualSDdem(nn)=annualSDdem(nn)+Annual_DMD(nn)
 		 !Reset flow demand annual vairiables to 0 for new year
 		 !Calculate annual SD for year that just occured
-		 if(sysstat(SIM_YEAR)==2) minYearSD(nn)=100 
+		 if(sysstat(SIM_YEAR)==1) minYearSD(nn)=100 !sysstat(SIM_YEAR)==1 changed from sysstat(SIM_YEAR)==2, thanks to Joe K. for finding this bug 290712
 		 YearSD=0.0
 		 if (Annual_DMD(nn)/=0.0) then
 			YearSD=(1-(Annual_SHRTG(NN)/Annual_DMD(nn)))*100
@@ -389,7 +389,7 @@
 	  IF(DMDNODE(nn).and. .not.ResvNode(nn) .and.  
      &	  .not. gwnode(nn) .and. .not.  natlak(nn))THEN 	  ! IF(CAPN(NN) == 0.0 .and. DMDNODE(nn))
 		!If simulations start in the middle of the year, these calculations are slightly off
-		nSimYears=SYSSTAT(YREND)-SYSSTAT(YRSTART)+1
+		!nSimYears=SYSSTAT(YREND)-SYSSTAT(YRSTART)+1 
 		!SI(nn)=100/nSimYears*annualSI(NN)
 		!SD(nn)=(1-(annualSDshrtg(nn)/annualSDdem(nn)))*100
 		if 	(TsSIsum(nn)>0.0) then
@@ -441,7 +441,7 @@
      &      GlobannCost(ln)/1000
 		end if	
 	end do
-	TotSimYears=(SYSSTAT(YREND)-SYSSTAT(YRSTART))
+	TotSimYears=(SYSSTAT(YREND)-SYSSTAT(YRSTART))+1 !+1 added to this equation 2907112, thanks to Joe K. for spotting this
 
 	WRITE(UNIT=ioutperf,FMT=*)
 	write(UNIT=ioutperf,FMT=18)'Tot Energy (GWh) Loss', 'Gain'
