@@ -1,0 +1,68 @@
+1. Made integers be 4 bytes instead of 2
+2. Made YearFailEvent(ny,nn,i)=.false. logical instead of integer
+3. Added policy and non-policy changes midrun
+4. Made Balance: lines in the INP read into memory
+5. Added possiblity of reservoirs releasing to a single demand node in priority order (one empties before another begins release)
+6. Gage nodes can now be sources for demand nodes. A gage node's release can now count towards reducing the step_deficit of a demand node in 
+releasefromdeficit in release.for so this flow is taken into account when calculating reservoir releases. A demand link must be connected to the gauge node
+and must either be a source for the demand node or the demand node must be directly downstream of the demand link. Reduction in step_deficit is limited 
+by the link's annual and TS flow capacities.
+7. Added TS and annual release limits for reservoir releases to demand nodes in the Source: lines in the INP
+8. Optimized how source links are allocated water.
+9. UndoUnitConversion subroutine created to reconvert units back into user defined units for output
+10. Added demand and diversion link annual capacities to represent licenses
+11. Fixed bugs in Gwlinkq.for
+12. IRAS prints the node calculation sequence to see what the priorities are and to be able to change it if necessary.
+13. Possible to change the order in which nodes are calculated, this is to give some control over priorities. A sequence file supplied by the user is needed if this change is enabled. Specified in irad.def
+14. Step_deficits are either reduced on allocation or not(if allocation needs to be propogated) This is defined in iras.def
+15. Changed gage and demand node name bug (reading similar names)
+16. Added cumulative flow for links with costing enabled
+17. Added time step reliabilty (instead of only annual)
+18. Fixed annual reliability bug
+19. Multiple performance files are made in the case of multiple runs
+20. Single reservoirs dont need balance tables anymore
+21. 270112 - Added column to the source line that defines a source link as either 'propogating (1)' or 'non-propogating(1)'. Non-propogating links 
+reduce a temporary variable with initial value equal to the step_deficit of the target demand node. This way, only the amount of water needed for the 
+demand node is allocated. Propogating links do not reduce the step_deficit and serve to direct flow that was already allocated to the target demand
+into the correct link. 
+This required making the temporary NonPropSTEP_DEFICIT variable. In addtion to the required changes in subroutine ReadTargetSource,
+ReadChangesFile,ReadINPFile, CHANGES and VARS modules and LINK.INC to accomodate a new column in the INP file, the major change in algorithm happened
+in OutflowAllocation involving the allocation of flow to demand links that are sources:
+
+				   do i=1,ndemnodelink(ln) !Do for the number of nodes that link supplies
+				      DemNode=LinkSourceNode(ln,i) !Select demand node ID
+				      do j=1,SUPLY_Links_pts(DemNode)
+				        if (SUPL_Link(j,DemNode)==ln) then
+				           if(LNKPROP(j,DemNode))then                 
+				            LSuplFrac=SUPL_FRAC_Link(j,DemNode) 
+				            ADJ=ADJ+STEP_DEFICIT(DemNode)*LSuplFrac
+				            ADJ_Frac(j,DemNode)=STEP_DEFICIT(DemNode)*LSuplFrac
+				           else
+				            LSuplFrac=SUPL_FRAC_Link(j,DemNode) 
+				            ADJ=ADJ+NonPropSTEP_DEFICIT(DemNode)*LSuplFrac
+				            ADJ_Frac(j,DemNode)=NonPropSTEP_DEFICIT(DemNode)
+     &				            *LSuplFrac				           
+				           end if
+				         end if
+				      end do
+                    end do	
+                    
+and                    
+
+                  do i=1,ndemnodelink(ln) !Do for the number of nodes that link supplies
+				      DemNode=LinkSourceNode(ln,i) !Select demand node ID
+				      do j=1,SUPLY_Links_pts(demnode)
+				        if (SUPL_Link(j,demnode)==ln.and.
+     &				      .not.LNKPROP(j,DemNode)) then
+							 StepRed=MIN(ADJ_Frac(j,demnode),ADJ_Temp)     !Set the step_deficit reduction to either the target node's share or what is remaining in the link 							
+							 NonPropSTEP_DEFICIT(DemNode)=
+     &							 NonPropSTEP_DEFICIT(DemNode)-StepRed !Reduce STEP_DEFICIT
+      						 NonPropSTEP_DEFICIT(DemNode)=
+     &      						 max(NonPropSTEP_DEFICIT(DemNode),0.0)   	 
+							 ADJ_Temp=ADJ_Temp-StepRed	!Reduce ADJ_Temp, so target nodes who's share of ADJ is lower priority don't seem like they can get the full ADJ 				     
+				         end if
+				      end do
+                  end do
+
+22. 300112  - Groundwater and Transfer: lines are now read into memory and no longer from the INP - Anthony      
+23. 290712 - Performance.for bugs fixed.           

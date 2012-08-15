@@ -1,0 +1,756 @@
+1. Overall changes
+1.  Made all integers 4 bytes instead of 2.
+
+Allocations.for
+Line 28 - Made YearFailEvent(ny,nn,i)=.false. (which chagned to a logical) initialize to false rather than 0
+Line 71 - Added deallocation of newly created BalanceArray [IF(ALLOCATED(BalanceArray)) DEALLOCATE(BalanceArray)]
+
+
+Added changes.for file. This file contains the new subroutine ChangeNonPolicyData() and subroutine ChangePolicyData(). These subroutines allow 
+for non-policy (parameters in the NODES and LINKS in the INP file) and policy parameter (parameters that change according to the POL file, found 
+after the NODE and LINK definitions in the INP) changes mid-run. This effectively renders the policy group changes obsolete, although they have not
+yet been removed from the code. This change resulted in making a new file, iras.chg, that defines which and when changes to parameters 
+are made during the run.
+
+Added changes_mode.for which defines the object types necessary to put the changes file into memory. 
+
+Finterp.for
+All integers changed to 4 bytes
+
+flwsim.for
+subroutine FLWSIM
+Lines 99-100 - Added definitions of real PotSrcRel(NODMAX) potqinn(nodmax)
+Lines 154-59 - The optional lines that open the NodesTS.out and LinksTS.out files for debugging moved to simsys.for:
+!	EVGENII - Activate four lines below (and calls for DayOutputNodeTS and DayOutputLinkTS
+!	towards end of subroutine) for diagnostic sub-time step OUTPUT
+!	ioutnodes=30 
+!	ioutlinks=40                                                 
+!	OPEN(UNIT = iOutnodes, FILE ='NodesTS.out', STATUS='replace') 
+!	OPEN(UNIT = iOutlinks, FILE ='LinksTS.out', STATUS='replace')
+
+Lines 157-151 - Added intialization of new variables
+	   PotSrcRel(nn)=0.0
+	   DO i=1,MXSUPLY
+	       TotSrcRelease(i,nn)=0.0	
+	   END DO
+	  nodesourcechange(nn)=.false. 
+Line 163 -  SysStat(Month) and QInn, which are global vars do not get passed into GetTotalFlow
+Line 188 -  call SetSourceLinkNodes() added for source link optimization, found in initsys.for
+Line 204 -  added PastSTSLinkAllo(ln)=0.
+Line 220-223 - Added call  PotentialStoSourceRel(DSTO,PotSrcRel,potqinn,success) which calculated potential reservoir and gage node release to sources,
+found in release.for. This subroutine returns PotSrcRel and potqinn
+Line 226 - PotSrcRel and potqinn now passed into ReleaseFromDeficit
+line 290 - Annual link flow variable added YearQLN(ln): YearQLN(ln)=YearQLN(ln)+DBQLN(LN)
+Line 294 - DTREL now passed into DayOutputNodeTS, but not ioutNodes (made global) and NodSeq which is global
+Line 295 - ioutLinks no longer passed into DayOutputLinkTS
+Lines 313-320 call StoragePerformance() and call LinkCost_and_Power() added for link costing, power and storage node performance
+Lines 337-342 Unit conversions moved into output.for:
+        !Convert units from /time-step /day
+	  INFLOW(NN) = INFLOW(NN) !/DAYSPRPRD  
+        TEVAPN(NN) = TEVAPN(NN) !/DAYSPRPRD
+        TSEEPL(NN) = TSEEPL(NN) !/DAYSPRPRD
+        TOTREL(NN) = TOTREL(NN) !/DAYSPRPRD
+        CONSUMPTION(NN) = CONSUMPTION(NN) !/DAYSPRPRD
+
+subroutine OutflowAllocation(NN,DTREL,DSTO,L_SOLVED)       
+line 584 added USE VARS 
+line 604 added INTEGER DemNode
+line 607 added REAL Avail_Cap_Year
+line 609 added LOGICAL HAVDEM
+line 652 changed            IF (LINDIV(OUTLNK(NN,1))) GO TO 220 to  IF (LINDIV(OUTLNK(NN,1)).or.DmdLink(OUTLNK(NN,1))) GO TO 220
+line 665 added intialization of HAVDEM = .FALSE.
+line 667 added              IF (OUTLNK(NN,1) .GT. 0) HAVDEM = DmdLink(OUTLNK(NN,1))
+line 668 cnanged IF (TOTOUT(NN).GT.1 .OR. HAVDIV) to IF (TOTOUT(NN).GT.1 .OR. HAVDIV .or.HAVDEM )
+line 667 added ADJ=0.0 !Evgenii 110517 added ADJ=0.0. AJD needs to reset to 0 so ADJ from other demand links on the node does not carryover
+line 687 changed 				   if (DMDNODE(out)) then into if (DMDNODE(out) .and. STEP_DEFICIT(out)>0.0) (for speed improvemnt)
+line 696 Changed:
+				   else 
+				     DO i = 1,tnodes
+					   do j=1,MXSUPLY
+						 if(SUPL_NODE(j,i)==linkid(ln)) then
+	                      ADJ=STEP_DEFICIT(I)*SUPL_FRAC(j,i)
+				         endif
+	                   end do
+				     end do
+                     end if
+
+into
+                     do i=1,ndemnodelink(ln) !Do for the number of nodes that link supplies
+				      DemNode=LinkSourceNode(ln,i) !Select demand node ID
+				      do j=1,SUPLY_Links_pts(demnode)
+				        if (SUPL_Link(j,demnode)==ln) then
+				            LSuplFrac=SUPL_FRAC_Link(j,DemNode) 
+				            ADJ=ADJ+STEP_DEFICIT(DemNode)*LSuplFrac
+				            ADJ_Frac(j,DemNode)=STEP_DEFICIT(DemNode)*LSuplFrac
+				         end if
+				      end do
+                     end do	
+                    
+This is for increasing speed of the source demand link allocation                  
+Line 719 added: Avail_Cap_Year=MAX(0.0, CapLYear(LN)- YearQLN(LN)) !For annual link capacities (licenses)
+Line 733 Added ADJ_Temp=ADJ
+
+Line 743-756 changed
+				  if (DMDNODE(out)) then
+					STEP_DEFICIT(out)=STEP_DEFICIT(out)-ADJ 
+				  else 
+				     DO i = 1,tnodes
+					   do j=1,MXSUPLY
+						 if(SUPL_NODE(j,i)==linkid(ln)) then
+	                      STEP_DEFICIT(I)=STEP_DEFICIT(I)-ADJ
+				         endif
+	                   end do
+				     end do
+                     end if
+into        
+
+				  !Reduce step deficit of demand nodes
+                    !if demand propogation is enabled, overlow can occur in this situation if you have multiple allocations
+                    !for the demand nodes because the deficit is not reduced                    
+				if (demprop==.false.) then  
+                    do i=1,ndemnodelink(ln) !Do for the number of nodes that link supplies
+				      DemNode=LinkSourceNode(ln,i) !Select demand node ID
+				      do j=1,SUPLY_Links_pts(demnode)
+				        if (SUPL_Link(j,demnode)==ln) then
+							 StepRed=MIN(ADJ_Frac(j,demnode),ADJ_Temp)     !Set the step_deficit reduction to either the target node's share or what is remaining in the link 							
+							 STEP_DEFICIT(DemNode)=STEP_DEFICIT(DemNode)-StepRed !Reduce STEP_DEFICIT
+      						 STEP_DEFICIT(DemNode)=max(STEP_DEFICIT(DemNode),0.0)   	 
+							 ADJ_Temp=ADJ_Temp-StepRed				 !Reduce ADJ_Temp, so target nodes who's share of ADJ is lower priority don't seem like they can get the full ADJ 
+				         end if
+				      end do
+                    end do
+                  end if
+This is for source link speed optimization. Reduction in step_deficit is now optional (This is now optional too, if (demprop==.false.)) in case demand flow propogation is  necessary                 
+
+Line 804  Added   Avail_Cap_Year=MAX(0.0, CapLYear(LN)- YearQLN(LN)), for annual link capacities
+Line 806 Changed  FLO_IN = MIN(FLO_IN,AVAIL_CAP) to  FLO_IN = MIN(FLO_IN,AVAIL_CAP,Avail_Cap_Year)
+
+Gwlinkq.for
+SUBROUTINE GWLNKQ1(LINK, STOIN, STOUT, GWFLOW)
+
+line 146 changed if (NARVO_PTS(Nin(Link))<=0.or.NARVO_PTS(Nin(Link))<=0) GOTO 9999 into if (NARVO_PTS(Nin(Link))<=0.or.NARVO_PTS(Nout(Link))<=0) GOTO 9999 !Bug fix
+
+SUBROUTINE GWLNKQ4(LINK, STOIN, STOUT, GWFLOW)
+line 314 changed
+       do i = 1, TotIn(NI)
+          IF(.not.GWLink(i).and..not.Dmdlink(i))
+     &            MaxDepth = MAX(MaxDepth, LastDepth(i)) !Evgenii - lastDepth defined in simlnk.for in ComputeLinkLDW, only if lossmethod2 is activated for link
+        end do
+
+into
+
+
+        DO i = 1, LINKS  !Evgenii changed TotIn(i) to LINKS 110714
+		!For all the inflow links of the node in question (which are not demand or GW links) 
+		IF (NOUT(i)==NI .and. .not.GWLink(i) .and. .not.Dmdlink(i)) !Evgenii added NOUT(i)=NI as check 110714
+     &            MaxDepth = MAX(MaxDepth, LastDepth(i)) !Evgenii - lastDepth defined in simlnk.for in ComputeLinkLDW, only if lossmethod2 is activated for link
+        END DO
+
+ line 330 changed
+ 
+         do i = 1, TotIn(NO)
+          IF(.not.GWLink(i).and..not.Dmdlink(i))
+     &            MaxDepth = MAX(MaxDepth, LastDepth(i))
+        end do
+ 
+to 
+
+        DO i = 1, LINKS  !Evgenii changed TotIn(NO) to LINKS 110714
+          IF(NOUT(i)==NO .and. .not.GWLink(i).and..not.Dmdlink(i))  !Evgenii added NOUT(i)=NO as check 110714
+     &            MaxDepth = MAX(MaxDepth, LastDepth(i))
+        END DO
+
+SUBROUTINE GWLNKQ0(LINK, STOIN, STOUT, GWFLOW)		
+
+line 481 Changed           ELSE IF (FIXED_IN) THEN to ELSE IF (FIXED_IN .AND. .NOT.FIXED_OUT) THEN  !120123 added .NOT.FIXED_OUT
+
+
+Subroutine getTransferData
+Line 534 changed if (ABS(GWFromVol(i)-AVAIL_WATER(1,GWPoints(1)))>0.01) then to if (ABS(GWFromVol(i)-AVAIL_WATER(1,GWPoints(1)))>0.000008) then !To increase resolution
+Line 546 changed
+
+       if (ABS(GWFromVol(i)-AVAIL_WATER(1,1))<0.01) then
+          GWPoints(2) = GWPoints(2) + 1
+          AVAIL_WATER(2,GWPoints(2)) = GWToVol(i)
+          if (GWPoints(2)>=IAGMAX) exit
+          
+to   
+
+        if (ABS(GWToVol(i)-AVAIL_WATER(2,GWPoints(2)))>0.000008) then ! Threshold altered by Anthony to allow smaller values to be differentiated between 120115
+          GWPoints(1) = GWPoints(1) + 1
+          GWPoints(2) = GWPoints(2) + 1
+          AVAIL_WATER(2,GWPoints(2)) = GWToVol(i)
+         if (GWPoints(2)>=(GWALO_PTS(LINK)/GWPoints(1))) exit ! This division was added as a hack by Anthony - it requires specific ordering of entries in .inp transfer table (see file format info) Anthony 120115
+ !Bug fix and increase in resolution
+
+InitSys.for
+subroutine ReadSimDef
+Line 40 Added INTEGERS j,iseq,idemprop,YearChange
+Line 75  Changed  
+
+     READ(aLine,*) SYSSTAT(YRSTART), SYSSTAT(YREND),SYSSTAT(NSUBTT),
+     &               SYSSTAT(NPER),SYSSTAT(nRuns)   
+to
+     READ(aLine,*) SYSSTAT(YRSTART), SYSSTAT(YREND),SYSSTAT(NSUBTT),
+     &               SYSSTAT(NPER),SYSSTAT(nRuns),iseq,idemprop   
+ 
+iseq defines if a user defined sequence file is used, idemprop defines is step_deficit is reduced upon allocation or not
+Line 84 added
+      userseq=.false.
+      !if user defined node sequence (for priorities)      
+      if (iseq==1) userseq=.true.
+ 
+      !if demand source link propagation
+      !This makes it so allocation to demand links that are sources do not reduce the
+      !step deficit of associated demand nodes allowing you to propagate a demand allocation
+      !down a a tree. If you have multiple allocations destined for this demand node, then you can
+      !get oversupply when this is enabled
+      demprop=.false.
+      if (idemprop==1) demprop=.true.      
+
+subroutine read_network_data(success)
+
+Line 261 Added CapLYear(i) to LINKS line read
+Line 271 CALL UnitConversion(2,UFlow, CapL(i) ) now if (CapL(i)>0.0) CALL UnitConversion(2,UFlow, CapL(i) )
+Line 272 Added if (CapLYear(i)>0.0) CALL UnitConversion(2,UFlow, CapLYear(i) ) ! For annual capacity conversion
+Line 276 	  CapLYear(i)=CapLYear(i)*365.0	 !Convert to volume per year for annual capactiy
+Line 306 changed CALL SelSeq() to
+      if (.not. userseq)then
+!       Get simulation sequence for nodes
+        CALL SelSeq()
+      else
+        CALL SetUserSeq()
+      end if
+!     Print out node sequence
+      CALL PrintSeq()      
+!This sees if the user has supplied a node sequence, if user hasnt, it is generated. If it is, its is read in in SetUserSeq. Then it prints the sequence used      
+
+subroutine readGageUnits
+Line 512 Took out 
+          IF(VERIFY(TRIM(GageName(i)),TRIM(NName(j)))==0) then !Makes sure the name of the gage is the node name
+instead
+        
+        		    IF(TRIM(GageName(i))==TRIM(NName(j))) then
+		          GageIDObs(i)=NodeID(j) !!GageIDObs(i,iType) changed to GageIDObs(i), bcs no added flow 100108 Evgenii
+		    end if
+Make sure gages of similar name get read in properly
+
+Line 565 Did the same as above for demand node names, changed:
+         IF(VERIFY(TRIM(DemName(i)),TRIM(NName(j)))==0)then !Makes sure the name of the gage is the node name
+               DemIDObs(i)=NodeID(j) !!GageIDObs(i,iType) changed to GageIDObs(i), bcs no added flow 100108 Evgenii       
+to
+          IF(TRIM(DemName(i))==TRIM(NName(j)))then !Makes sure the name of the demand is the node name
+               DemIDObs(i)=NodeID(j)      
+Make sure demand nodes of similar name get read in properly
+               
+Subroutine InitVariables
+Line 605				 Changed YearFailEvent(JJ,NN,I)=0 to YearFailEvent(JJ,NN,I)=.false.
+Line 629-30 Added 
+	   NODE_EVAP_ON(Node)=.false.
+	   nodesourcechange(node)=.false. 
+Line 637 added 
+	   DO JJ = 1, MXSUPLY
+		  Source_Type(jj,node)=0
+	   ENDDO
+Line 641 changed         sto_perf_node(nn)=.false. to  sto_perf_node(node)=.false. !Fixed bug
+Line 644 Added 	   srcpriorities(node)=.false.
+Line 678 added  ndemnodelink(i)=0;YearQLN(i)=0.
+Line 693 Added totflow(i)=0.0
+
+subroutine InitPolicy	
+Line 761 changed do NN = 1,NODMAX to NN = 1, tnodes 
+LINE 770 changed do NN = 1,LNKMAX to do NN = 1,links
+Line 1010 subroutine SetSourceLinkNodes() added to improve demand link efficiency in flwsim
+
+
+
+Modules.for
+Line 12 YearFailEvent now logical not integer
+Line 60 Added integer srcpriority to TYPE ELEMENT_TARGET
+Line 88 TYPE ELEMENT_SOURCE. Added integer Source_Type (specifies link or node source), and REAL MaxOutTS, MaxOutYear (max TS release and Max annual release)
+Line 146 Added TYPE ELEMENT_BALANCE, TYPE ELEMENT_NONPOLCHANGE
+	  TYPE ELEMENT_BALANCE	   !Evgenii 110504
+          SEQUENCE 
+		  INTEGER*4   :: GroupID, Policy, RuleID, BalMeth
+		  character*256 :: charBalance
+ 		  REAL*4 :: GroupVol
+        END TYPE ELEMENT_BALANCE
+        
+        TYPE ELEMENT_NONPOLCHANGE	   !Evgenii 241011
+            SEQUENCE 
+		    INTEGER*4   :: CompID, CompType, Year 
+		    character*50 :: Var_Name
+		    real*4 :: Var_Value
+        END TYPE ELEMENT_NONPOLCHANGE
+        
+Line 194 added  
+	  INTEGER*4::nBalance
+	  TYPE (ELEMENT_BALANCE), POINTER::pBALANCE(:)	  !Evgenii 110504
+	  INTEGER*4::nNonPolChange
+	  TYPE (ELEMENT_NONPOLCHANGE), POINTER::pNonPolChange(:)	      !Evgenii 241011
+Line 239 added
+ 	TYPE (ELEMENT_BALANCE),DIMENSION(:), ALLOCATABLE,TARGET::BalanceArray	!Evgenii 110504
+	TYPE (ELEMENT_NONPOLCHANGE),DIMENSION(:), 
+     &	ALLOCATABLE,TARGET::NonPolChangeArray       
+     
+Output.for     
+Line 10 Took out SUBROUTINE DayOutputText
+Line 102 added REAL convbqln,EndNodeSto(NODMAX),BegNodeSto(NODMAX)
+Line 115 added unit conversions
+	do i=1,tnodes
+	  !Convert units from Mm3/time-step to what guage input units were
+        
+	  call UndoUnitConversion(1,uFlow,INFLOW(i))
+        call UndoUnitConversion(1,uFlow,TEVAPN(i))
+        call UndoUnitConversion(1,uFlow,TSEEPL(i))
+        call UndoUnitConversion(1,uFlow,TOTREL(i))
+        call UndoUnitConversion(1,uFlow,CONSUMPTION(i))  
+        BegNodeSto(i)=BSTO(i)
+        EndNodeSto(i)=ESTO(i)
+        call UndoUnitConversion(1,uVol,BegNodeSto(i))
+        call UndoUnitConversion(1,uVol,EndNodeSto(i))
+      end do
+Line 132 Changed if conditions (bug fix) and changed ESTO and BSTO to EndNodeSto and BegNodeSto
+		if (ResvNode(i).or. NatLak(i) .or. GWNODE(i)) then
+			t_storage=t_storage+1
+			k=k+1
+			storage_beg(k)=BegNodeSto(i)  !Beg. storage array
+			storage_Name(k)=TRIM(NNAME(i)) !Name for begstorage nodes
+			storage_id(k)=nn   !node id
+			storage_end(k)=EndNodeSto(i)
+		endif
+Line 157 changed if conditions to   		if (ResvNode(i).or. NatLak(i) .or. GWNODE(i))then   
+Line 178 Changed non-allocated flow calculation to reflect converted units
+          DO J = 1,TOTOUT(NN) !Find non allocated flow
+			 LN = OUTLNK(NN,J)
+			 convBQLN=BQLN(ln)
+			 call UndoUnitConversion(1,uFlow,convbqln)         
+             TOT_ALLOC = TOT_ALLOC + convBQLN
+          ENDDO
+          
+Line 214 Changed output order   
+		write(ioutfilebin,FMT=11,advance='no')     !Write the output category                 
+     &	(begsto(i),i=1,t_storage),(endsto(i),i=1,t_storage),
+     &	(cons(i),i=1,t_cons), 
+     &	(evap(i),i=1,tevap_nodes),(seep(i),i=1,tseep),  
+     &	(flowin(i),outflow(i),i=1,tnodes),                             !(endsto(i),i=1,t_storage)
+     &    (unallC(i),i=1,tnodes) !(gagein(i),i=1,t_gage),
+
+Line 223 changed output order
+		write(ioutfilebin,FMT=10,advance='no')'Day', !Write the name of node
+     &   (storage_Name(i),i=1,t_storage),(storage_Name(i),i=1,t_storage)
+     &	,(cons_name(i),i=1,t_cons),	
+     &	(evap_name(i),i=1,tevap_nodes),(seep_name(i),i=1,tseep),
+     &	(NName(i),NName(i),i=1,tnodes),					!(storage_Name(i),i=1,t_storage)
+     &    (NName(i),i=1,tnodes)!(Gage_Name(i),i=1,t_gage)	
+
+     Line 234 changed output order     
+	write(ioutfilebin,FMT=9,advance='no')iday, !Write the data for each day 
+     &	(storage_beg(i),i=1,t_storage),(storage_end(i),i=1,t_storage)
+     &	,(consump(i),i=1,t_cons),
+     &	(tevap(i),i=1,tevap_nodes),(seepage(i),i=1,tseep),
+     &	(inflow(i),TOTREL(i),i=1,tnodes),
+     &  (unallocated(i),i=1,tnodes) !(gage(i),i=1,t_gage)                      !(storage_end(i),i=1,t_storage),
+
+subroutine DayOutputLink
+Line 396 iOutfileBin no longer passed in
+Line 267 added REAL linkvol(LNKMAX) 	
+Line 279 Added unit conversions
+      DO i = 1,LINKS
+        !Even if loss conversions used Uloss to convert in read_sim_data before, loss is in flow units so Uflow is used now)
+        call UndoUnitConversion(2,uPower,ENERGY(i))
+        call UndoUnitConversion(2,uFlow,BQLN(i))
+        call UndoUnitConversion(2,uFlow,EQLN(i))
+        !volumes need to be kept in iras units for future timestep
+        linkvol(i)=TOT_LVOL(i)
+        call UndoUnitConversion(2,uVol,linkvol(i))
+        call UndoUnitConversion(2,uFlow,TLossL(i))
+       ENDDO
+Line 319 changed  volume(k3)=TOT_LVOL(i) to 			volume(k3)=linkvol(i)    
+
+subroutine DayOutputLinkTS(iDay,step)
+Line 410 added  REAL EnergyConv(LNKMAX),
+     &      BQLNconv(LNKMAX),TOT_LVOLconv(LNKMAX),TLossLconv(LNKMAX),
+     &      EQLNconv(LNKMAX),DBQLNconv(LNKMAX) 	
+line 418 Added CHARACTER      begflowTS(LNKMAX)
+
+Line 429 added unitconversions
+	 DO i = 1,LINKS
+        !Even if loss conversions used Uloss to convert in read_sim_data before, loss is in flow units so Uflow is used now)
+        
+        EnergyConv(i)=ENERGY(i)
+        call UndoUnitConversion(2,uPower,EnergyConv(i))
+        BQLNconv(i)=BQLN(i)
+        call UndoUnitConversion(2,uFlow,BQLNconv(i))
+        EQLNconv(i)=EQLN(i)
+        call UndoUnitConversion(2,uFlow,EQLNconv(i))
+        !volumes need to be kept in iras units for future timestep
+        TOT_LVOLconv(i)=TOT_LVOL(i)
+        call UndoUnitConversion(2,uVol,TOT_LVOLconv(i))
+        TLossLconv=(tLossL(i))
+        call UndoUnitConversion(2,uFlow,TLossLconv(i))
+        DBQLNconv(i)=DBQLN(i)
+        call UndoUnitConversion(2,uFlow,DBQLNconv(i))
+        
+        
+       ENDDO
+Line 458,467,473,480 Changed to converted vars:TLossLconv,EQLNconv, ENERGYconv,TOT_LVOLconv
+Line 496 Added 		begflowTS(i)='Beg_FlowTS' for TS non cumulative flow output
+
+Lines 521-544 Changed order of output and filenameID:
+		write(ioutlinksts,*)'Run number = ', SysStat(run)
+		
+		write(ioutlinksts,FMT=11,advance='no')     !Write the parameter name                 
+     &	(begflow(i),begflowTS(i),i=1,links),(Cend(i),i=1,tend),
+     &	(CLoss(i),i=1,tLoss),(cenergy(i),i=1,tenergy),
+     &	(Cvolume(i),i=1,troute),(Cwidth(i),i=1,tgeo),
+     &	(Cdepth(i),i=1,tgeo),(Cvelocity(i),i=1,tgeo)	
+		write(ioutlinksts,*)
+		
+		write(ioutlinksts,FMT=10,advance='no')'Day','Step', !Write the name of node
+     &	(LName(i),LName(i),i=1,links),(end_Name(i),i=1,tend),
+     &	(Loss_Name(i),i=1,tLoss),(energy_name(i),i=1,tenergy),
+     &	(Volume_Name(i),i=1,troute),(GeoName(i),i=1,tgeo),
+     &	(GeoName(i),i=1,tgeo),(GeoName(i),i=1,tgeo)
+	write(ioutlinksts,*)
+	endif !ends if loop for day=1
+	
+
+	write(ioutlinksts,FMT=9,advance='no')sysstat(nday),step, !Write the data for each day 
+     &	(BQLNconv(i),DBQLNconv(i),i=1,links),(endln(i),i=1,tend), 
+
+     &  (loss(i),i=1,tloss),(energyln(i),i=1,tenergy),
+     &  (volume(i),i=1,troute),
+     &	(width(i),i=1,tgeo),(depth(i),i=1,tgeo),(velocity(i),i=1,tgeo)
+Line 547 Changed filenameID 	write(ioutlinksts,*)
+Line 551 Changed number of decimal output 9     FORMAT(2I6,10000F51.4)
+
+Subroutine DayOutputNodeTS(iDay,step,DSTO,DTREL) 
+iOutfileBin no longer passed in, NN_SEQ, and DTREL are now passed in
+Line 573 REALS added 
+	real:: DSTO(nodmax),inflowtsconv(nodmax),INFLOWconv(nodmax),DTREL(NODMAX)
+	real:: TEVAPNconv(nodmax),TSEEPLconv(nodmax),TOTRELconv(nodmax),DTRELconv(NODMAX) 
+	real:: CONSUMPTIONconv(nodmax),BSTOconv(nodmax),DSTOconv(nodmax)
+Line 583  Character added outflowTS(nodmax)   
+
+Line 584 Unit conversions added
+Line 611 from NN = NN_SEQ(I) to NN = NODSEQ(I)
+Line 614 if (CAPN(i).gt.0.0 .or. GWNODE(i)) then to if (ResvNode(i) .or. NatLak(i) .or. GWNODE(i)) then
+Lines 617,620 BSTO and ESTO to BSTOconv and DSTOconv
+Line 631 Added call UndoUnitConversion(1,uFlow,gage(k2))
+Line 639,642,647,655 replaced vars with converted vars
+Line 662 Added outflowTS(i)='OutflowTS'
+Lines 685-712  Chagned ouput order, and fileID, format lines 
+		write(ioutnodests,FMT=11,advance='no')     !Write the output category                 
+     &	(flowin(i),inflowst(i),outflow(i),outflowTS(i),i=1,tnodes),
+     &	(gagein(i),i=1,t_gage),  
+     &	(begsto(i),i=1,t_storage),(endsto(i),i=1,t_storage), 
+     &	(cons(i),i=1,t_cons),(evap(i),i=1,tevap_nodes),		
+     &	(seep(i),i=1,tseep)
+		write(ioutnodests,*)
+		
+		write(ioutnodests,FMT=10,advance='no')'Day ','step', !Write the name of node
+     &	(NName(i),NName(i),NName(i),NName(i),i=1,tnodes),
+     &	(Gage_Name(i),i=1,t_gage),
+     &	(storage_Name(i),i=1,t_storage),
+     &	(storage_Name(i),i=1,t_storage),(cons_name(i),i=1,t_cons),	
+     &	(evap_name(i),i=1,tevap_nodes),(seep_name(i),i=1,tseep)
+		
+		write(ioutnodests,*)
+	endif !ends if loop for day=1
+	
+
+	write(ioutnodests,FMT=9,advance='no')sysstat(nday),step, !Write the data for each day 
+
+     &	(inflowconv(i),inflowtsconv(i),TOTRELconv(i),
+     &	 DTRELconv(i),i=1,tnodes),
+     &  (gage(i),i=1,t_gage),(storage_beg(i),i=1,t_storage),
+     &	(storage_end(i),i=1,t_storage),(consump(i),i=1,t_cons),
+     &	(tevap(i),i=1,tevap_nodes),(seepage(i),i=1,tseep)
+	
+	write(ioutnodests,*)
+    
+9     FORMAT(2I8,10000F26.4)
+10    FORMAT(2A8,8X,10000A26)
+
+Performance.for
+subroutine StoragePerformance()
+Line 82 added YearFailEvent(sysstat(SIM_YEAR),nn,i)=.true. after if(infailure) then (bug fix)
+LIne 94-95 Deleted (now logical variable)
+				YearFailEvent(sysstat(SIM_YEAR),nn,i)=
+     &			YearFailEvent(sysstat(SIM_YEAR),nn,i)+1	
+Line 132 Lines now surrounded by if statement
+			if(DMD_TARG(NN)/=0.0)then
+				TsSIsum(nn)=TsSIsum(nn)+
+     &			(TSflw_DEFICIT(NN)/(DMD_TARG(NN)*DAYSPRPRD))**2
+		    end if
+
+subroutine LinkCost_and_Power()     
+line 234 added cumulative flow totflow(ln)=totflow(ln)+ BQLN(ln)
+
+subroutine PerformanceOutput()
+Line 279 Added REAL reliabilityTS(thres_pts_max,nodmax)
+Line 308 if(YearFailEvent(ny,nn,i)==.true.) instead of >0
+Line 334 Multiple performance files now made in the case of multiple runs Performance
+    		performance_filename='performance'//trim(xrun)//'.out'
+Line 352 Added TS reliabilty output       
+            !Time step reliability 
+            reliabilityTS(i,nn)=1 - real(nTime_Steps_Tot(i,nn))
+     &         /sysstat(nrec)      
+Line 384   Added TS reliabilty output  
+ 			write(UNIT=ioutperf,FMT=10)'Threshold',
+     &			'Total Failures for Threshold',
+     &			'Ave. Time Steps in Failures',
+     &	    	'Max Time Spent in Failure',
+     &			'Annual Reliability',
+     &          'Time Step Reliability'
+			do j=1,perf_pts(nn)
+				 write(UNIT=ioutperf,FMT=11)
+     &			 j,nStoreFail(j,nn),ave_sto_fail(j,nn)				
+     &             ,max_sto_fail_dur(j,nn),
+     &			 reliability(j,nn)
+Line 401 Added addition conditions on if    
+	  IF(DMDNODE(nn).and. .not.ResvNode(nn) .and.  
+     &	  .not. gwnode(nn) .and. .not.  natlak(nn))THEN 	  ! IF(CAPN(NN) == 0.0 .and. DMDNODE(nn))
+Line 449  Added addition conditions on if
+		if (powerlink(ln).or.pumplink(ln).or.FlowEng(ln)/=0.0.or.
+     &		flowcost(ln)/=0.0) then	
+ 
+Lines 476,477 Format changed
+10    FORMAT(A30,45A30)
+11	FORMAT(I30,I30,F30.2,I30,2F30.3)
+
+
+rd_flow_day.for
+SUBROUTINE GetTotalFlow
+Line 13 iMonth,flowTot no longer passed into subroutine
+Line 68 flowTot(i) changed to qinn(i)
+
+Read_Sim_data.for
+Line 98 Added call cpu_time(timings(1)) for timing
+Line 179 added nodesourcechange(i)=.true. !Evgenii added 110918 for link sources optimization
+Line 635 Added L_method(iReadSeq)=pRouting(L)%iMethod  !Anthony fixed reading in L_method 120116
+Line 639 L_NRTRES(iReadSeq)=pRouting(L)%L_NRTRES        !Anthony fixed reading in L_NRTRES 120116
+LIne 696 avar replaced
+Line 931  added IF(Cost_BL<0) Cost_BL = L - 1 to cost reading fixing bug
+Line 1113 Added if(NODE_EVAP(iReadSeq)>0.) NODE_EVAP_ON(iReadSeq)=.true. to evaporation read
+Line 1339 Updated Target read for priorities
+            if (pTarget(L)%srcpriority==0)then
+                srcpriorities(node)=.false.
+            else if (pTarget(L)%srcpriority==1)  then
+                srcpriorities(node)=.true. 
+            end if
+Subroutine  ReadTargetSource
+Added 
+Line 1158 significiant changes for srcpriorities, source capacities (TS and annual)
+      SUPLY_Links_pts(node) =0
+      !Kang add 20100629
+      cTargetSource = cTargetSource + 1
+      !Kang modify 20100630 
+!      iDatafile = 11
+!      OPEN(UNIT=iDatafile, FILE=TRIM(filename), STATUS='old',
+!     &	 FORM='formatted', ERR= 999)
+
+      n = 0
+      m = 0
+      IF(bUseBufferedBinaryData) THEN
+        DO L=1, nSource
+          IF(pSource(L)%GroupID==PolicyGrp.and.pSource(L)%Policy==Policy
+     &          .and.pSource(L)%CompType==CompType
+     &          .and.pSource(L)%NodeID==IDNode)then
+                    
+            if(pSource(L)%Source_Type==1) then
+                n = n + 1  
+                !Source_Type(n,Node)=pSource(L)%Source_type
+                SUPL_NODE(n,Node) = pSource(L)%Supl_Node
+		        !Source_Type(n,Node) = pSource(L)%Source_Type
+                SUPL_FRAC(n,Node) = pSource(L)%Supl_Frac
+		        MaxOutTS(n,Node)=  pSource(L)%MaxOutTS	 !110715 Evgenii added MaxOutTS
+		        MaxOutYear(n,Node)=  pSource(L)%MaxOutYear	 !280915 Evgenii added MaxOutYear
+                !SrcPriority(n,Node)=pSource(L)%SrcPriority
+		        !SrcPriority(n,node)= pSource(L)%SrcPriority
+		        if(MaxOutTS(n,node)>=0.0) then
+     		            call UnitConversion(1,UFlow,MaxOutTS(n,Node)) !Converts to Mm3/day
+     		            MaxOutTS(n,node)=MaxOutTS(n,node)*DAYSPRPRD	!Converts to Mm3/TS
+     		        end if	    
+     		        if(MaxOutYear(n,node)>=0.0) then
+     		            call UnitConversion(1,UFlow,MaxOutYear(n,Node)) !Converts to Mm3/day 
+     		            MaxOutYear(n,node)=MaxOutYear(n,node)*365	!Converts to Mm3/year
+     		        end if
+		    else if(pSource(L)%Source_Type==2) then
+		        m = m + 1		        
+		        !Source_Type(n,Node)=pSource(L)%Source_type
+		        SUPL_Link(m,node)= pSource(L)%Supl_Node !This is the link source ID for node
+		        SUPL_FRAC_Link(m,node) = pSource(L)%Supl_Frac	
+		        !MaxOut(m,node)=  pSource(L)%MaxOut			        		        		   	    
+		    end if
+            
+
+Line 1546-1576 Optimized for demand link speed
+99   SUPLY_PTS(Node) = n !Number of supply reserviors for node
+      SUPLY_Links_pts(node) = m !Number of supply links for node
+      
+      !Kang modify 20100630 CLOSE(UNIT=iDataFile)
+            
+      !Set SUPL_NODE() from NodeID to NodeSeq
+         
+      if (n > 0) then
+        do i = 1, n
+          do j = 1, TNodes
+             if (NodeID(j) == SUPL_NODE(i,Node)) then
+
+               SUPL_NODE(i,Node) = j
+               exit
+             end if
+!            if (NodeID(j) == SUPL_NODE(i,Node)!.and.
+!     &		   Source_Type(i,Node)==1) then  !Evgenii added Source_Type(n,Node)=1 so links can be sources too and they dont change their ID here
+!			   SUPL_NODE(i,Node) = j
+!              exit
+!            end if
+          end do
+        end do
+      end if
+   
+      if (m > 0) then !if (m > 0) then node has one or more supply links     
+        do i = 1, m
+          do j = 1, Links
+             if (LinkID(j) == SUPL_Link(i,node)) then !Change from Link ID in INP (user ID) to internal IRAS ID
+                SUPL_Link(i,Node)=j
+                !ndemnodelink(j)=ndemnodelink(j)+1 !Increase number of nodes link supplies
+               exit
+             end if
+          end do
+        end do
+      end if     
+Subroutine  readGrpBalance      
+Line 1870  Balance now reads into memory
+      IF(bUseBufferedBinaryData) THEN
+        DO L=1, nBalance
+          IF(pBalance(L)%GroupID==PolicyGrp.and.pBalance(L)%Policy==
+     &      Policy.and.pBalance(L)%RuleID==RuleGrp)then
+            n = n + 1
+            BalMethod(n,IGrpSeq)=BalanceArray(nBalance)%BalMeth
+		    GrpVol(n,IGrpSeq)=BalanceArray(nBalance)%GroupVol	                                							
+            !BalCols=CountColumns(pBalance(L)%charBalance)
+		    aline=pBalance(L)%charBalance
+		    iPos = INDEX(aLine, ':')
+		    read(aLine(iPos+1:),*)aVar, aVar, aVar,avar,avar,          
+     &         ((ResvIDInGrp(i,iGrpSeq),RuleResVol(n,i,iGrpSeq),
+     &		   BalanceVol(n,i,iGrpSeq)),i=1,nResvInGrp(iGrpSeq))  
+ 		    call unitConversion(1,UVol, GrpVol(n,iGrpSeq) )
+            do i = 1,nResvInGrp(iGrpSeq)
+              call unitConversion(1,UVol, BalanceVol(n,i,iGrpSeq) )
+            end do
+		    if (n >= IAGMAX ) exit
+		  end if      
+	   end do    
+       
+Line 2136 Added  SUBROUTINE UndoUnitConversion(iComp,iType, x)
+      implicit none
+      INCLUDE 'IRAS_SYS.INC'
+!  INPUT
+      INTEGER*4 iComp, iType         !iComp = 1 for nodes; 2 for links
+      REAL*4 x
+!  OUTPUT
+      !x
+	select case (iType)
+          case (ULen,UArea,UVol,UFlow,ULoss,UPower,UK,UTime)
+            if (iComp == 1) x = x / NodeUserUnit(iType) 
+            if (iComp == 2) x = x / LinkUserUnit(iType)
+          case default
+            x = x     !no change
+      end select
+	
+      END SUBROUTINE
+
+Readfiles.for      
+Added Subroutine ReadChangesFile(success) to read the new iras.chg file
+Subroutine ReadINPFile(success)
+Line 1150 Added to SourceArray
+                   read(aLine(iPos:),*)SourceArray(nSource)%GroupID, 
+     &                                SourceArray(nSource)%Policy,
+     &                                SourceArray(nSource)%CompType,
+     &                                SourceArray(nSource)%NodeID, 
+     &                                SourceArray(nSource)%Supl_Node,
+     & 								  SourceArray(nSource)%Source_Type,	!Evgenii 110404 added source_type
+     &                                SourceArray(nSource)%Supl_Frac,
+     &								  SourceArray(nSource)%MaxOutTS,			
+     &                                SourceArray(nSource)%MaxOutYear
+Reelase.for
+SUBROUTINE RELEASE
+LIne 79 Added PastSTSDemsRelease(node)=TARGETS(NODE) !For reservoir potential releases
+Line 85 Fixed parantheses on if statement:        IF((RESVNODE(NODE).OR.NATLAK(NODE)).AND.TMP_STOR(NODE).GT.0)THEN
+
+INTEGER*2 FUNCTION BALANCE_GRP(RULENODE,STORAGES,TOTAL_RELEASE)
+Line 391
+	!Evgenii added if below so that single reserviors do not need balance tables. 12.04.11
+	IF(RESV_COUNT == 1)THEN
+		TOTAL_STORAGE=STORAGES(RULENODE)
+	else if (RESV_COUNT > 1) then
+
+    
+subroutine ReleaseFromDeficit changed significantly 
+subroutine PotentialStoSourceRel added 
+
+selseq.for
+Added SUBROUTINE PrintSeq() to print the node calculation sequence and SUBROUTINE SetUserSeq() to use a user defined sequence
+
+
+simsys.for
+LIne 141 added reading in Changes file
+	!Read changes file
+	call readChangesFile(success)
+	if ( .not.success) then																			
+			WRITE(*,*)'Error in reading CHG file'
+			STOP
+      END if
+Line 312 Moved code to open STS output files here
+		!EVGENII - Activate four lines below (and calls for DayOutputNodeTS and DayOutputLinkTS
+!	towards end of FLWSIM in flwsim.for) for diagnostic sub-time step OUTPUT
+	  !ioutnodests=32
+	  !ioutlinksts=33                                                
+	  !OPEN(UNIT = iOutnodesTS, FILE ="NodesTS.out", STATUS='replace') 
+	  !OPEN(UNIT = iOutlinksTS, FILE ='LinksTS.out', STATUS='replace') 
+!
+Line 339 Added call SetSourceLinkNodes() !Evgenii added 110915 to search link sources
+
+Line 388  and Line 413 Added calls to midrun changes subroutines as well as resetting annual vars for new years
+				 
+			     call ChangeNonPolicyData		
+			     call ChangePolicyData		 
+				 !Reset annual licenses
+				 do ln=1,links
+				    YearQLN(ln)=0.0
+				 end do
+				 do nn=1,tnodes
+				    do s=1,MXSUPLY
+				        AnnualOut(MXSUPLY,NODMAX)=0.0
+				    end do
+				 end do						 
+
+IRAS_SYS.INC
+Increased maximum values for LNKMAX, NODMAX, YRMAX, GAGMAX,ILKMAX,OLKMAX, RNMAX, RMAX,ZNMAX, MXSUPLY
+Added 
+	    integer*4 ioutnodests, ioutlinksts
+        logical*1 userseq, demprop
+      
+	!For changes
+	logical*1 YearPolChg(YRMAX,2)
+	logical*1 YearNodePolicyChg(2,YRMAX,MaxPolicyTypes,nodmax)    
+Added 
+     CapLYear(LNKMAX),NODE_EVAP_ON(NODMAX)  
+	   Real*4	   MaxOutTS(MXSUPLY,NODMAX),MaxOutYear(MXSUPLY,NODMAX)
+	   Real*4	   AnnualOut(MXSUPLY,NODMAX),PastSTSLinkAllo(LNKMAX)
+	   Real*4      PastSTSDemsRelease(NODMAX)
+	   INTEGER*4  MXLINKSOURCE
+	   PARAMETER (MXLINKSOURCE=20)
+	   INTEGER*4  LinkSourceNode(LNKMAX,MXSUPLY)
+	   INTEGER*4  SUPLY_Links_pts(NODMAX)
+	   INTEGER*4  ndemnodelink(NODMAX)
+	   INTEGER*4  SUPL_Link(MXSUPLY,NODMAX),srcpriority(NODMAX)	
+	   INTEGER*4  SUPL_FRAC_Link(MXSUPLY,NODMAX)
+	   logical*1  nodesourcechange(NODMAX),srcpriorities(NODMAX)
+Added  
+      Real*4 YearQLN(LNKMAX) !Annual flow through link
+	  Real*4	 TotSrcRelease(MXSUPLY,nodmax)	     
+     
