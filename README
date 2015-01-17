@@ -4,10 +4,10 @@ This repo is a clone of that found on Sourceforge (http://sourceforge.net/projec
 
 To run,
 
-'''
+```
 make
 cd example
 ../iras
-'''
+```
 
 Note this has only been briefly tests on gfortran-4.9.2 on Linux.
