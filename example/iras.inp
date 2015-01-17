@@ -1,0 +1,75 @@
+NODES
+1  0 0          0          1 0 0 0 0 0 0 0 Gauge-A   
+2  0 0          0          1 0 0 0 0 0 0 0 Gauge_B   
+3  0 0          0          1 0 0 0 0 0 0 0 Jct-Gauge 
+4  0 0          0          0 0 0 0 0 0 0 0 Cons_A    
+5  0 100.000000 75.000000  1 0 0 1 0 1 0 0 Lake      
+6  0 700.000000 350.000000 1 6 1 0 0 1 0 0 Res       
+7  0 0          0          1 0 0 0 0 0 0 0 Gauge_C   
+12 0 0          0          1 0 0 0 0 0 0 0 Agg_Tribs 
+13 0 0          0          0 0 0 0 0 1 0 0 Env_Flw   
+14 0 0          0          0 0 0 0 0 0 0 0 Cons_B    
+END OF NODES
+LINKS
+1  1  3  0 0         0 0 0 0 Gauge-A_Jct-Gauge 
+2  2  3  0 0         0 0 0 0 Gauge_B_Jct-Gauge 
+3  3  4  0 35.000000 0 1 0 0 Jct-Gauge_Cons_A  
+4  3  5  0 0         0 0 0 0 Jct-Gauge_Lake    
+5  5  6  0 0         0 0 0 0 Lake_Res          
+6  7  6  0 0         0 0 0 0 Gauge_C_Res       
+7  4  5  0 0         0 0 0 0 Cons_A_Lake       
+8  6  13 0 0         0 0 0 0 Res_Env_Flw       
+9  12 13 0 0         0 0 0 0 Agg_Tribs_Env_Flw 
+10 13 14 0 0         0 0 0 0 Env_Flw_Cons_B    
+END OF LINKS
+
+**************LOSS FOR NODES********************
+
+**************LOSS FOR LINKS********************
+
+**************Rating tables********************
+------Nodes------
+Rating: 1 1 1 5 24.0 400.0  39.0  0.0 0     0.0   
+Rating: 1 1 1 5 28.0 800.0  63.0  0.0 0     20.0  
+Rating: 1 1 1 5 30.0 1400.0 85.0  0.0 0     80.0  
+Rating: 1 1 1 5 31.0 2100.0 100.0 0.0 0     250.0 
+Rating: 1 1 1 6 0.0  0.0    0.0   0.0 0.0   0.0   
+Rating: 1 1 1 6 0.0  0.0    100.0 0.0 20.0  20.0  
+Rating: 1 1 1 6 0.0  0.0    250.0 0.0 35.0  35.0  
+Rating: 1 1 1 6 0.0  0.0    350.0 0.0 45.0  45.0  
+Rating: 1 1 1 6 0.0  0.0    550.0 0.0 180.0 180.0 
+Rating: 1 1 1 6 0.0  0.0    700.0 0.0 330.0 330.0 
+------Links------
+
+*****Allocation and Consumption Functions***** 
+** Allocation function
+Allocation: 1 1 1 3 0.0  3 0.0  
+Allocation: 1 1 1 3 30.0 3 0.0  
+Allocation: 1 1 1 3 31.0 3 1.0  
+Allocation: 1 1 1 3 65.0 3 35.0 
+Allocation: 1 1 1 3 66.0 3 35.0 
+**Consumption functions
+Allocation: 1 1 1 4 0.0 0 0.0
+Allocation: 1 1 1 4 10.0 0 10.0
+Allocation: 1 1 1 4 35.0 0 20.0
+Allocation: 1 1 1 14 0.0 0 0.0
+Allocation: 1 1 1 14 20.0 0 0.0
+Allocation: 1 1 1 14 30.0 0 10.0
+Allocation: 1 1 1 14 31.0 0 10.0
+END OF ALLOCATION            
+*******Targets and Sources**********
+Target: 1 1 1 6  600.0 0 0 0 0.0 
+Target: 1 1 1 13 50.0  0 0 0 0   
+Target: 1 2 1 13 60.0  0 0 0 0   
+Target: 1 3 1 13 50.0  0 0 0 0   
+Target: 1 4 1 13 40.0  0 0 0 0   
+            
+*******DemRed**********
+            
+*******Performance**********
+Performance:	1	1	6	0.30
+Performance:	1	1	6	0.20
+************* Reservoir Groups***************
+-----Res Balance Table------
+******Pumping and Hydropower********* 
+SysEvaporation: 1 0

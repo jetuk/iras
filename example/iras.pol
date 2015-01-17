@@ -1,0 +1,14 @@
+IRAS: Network
+!PolicyID, BegDate, EndDate
+SysEvaporation: 1,1,365.999
+!POLICIES FOR NODES AND LINKS
+POLICIES
+Target: 1,6,1,1,6,1,365.999 !Res
+Target: 1,6,1,1,13,1,80.999 !Env_Flw
+Target: 1,6,2,1,13,81,205.999 !Env_Flw
+Target: 1,6,3,1,13,206,265.999 !Env_Flw
+Target: 1,6,4,1,13,266,365.999 !Env_Flw
+END OF POLICIES
+!PolicyGrpID,PolicyType,PolicyID,CompType,CompID (iNodeLinkID),BegDate,EndDate
+!CompType says if its a for a node (CompType=1) or link (2)
+
