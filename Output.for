@@ -2,6 +2,7 @@
 !Authors:
 !Evgenii Matrosov (evgenii.matrosov@ucl.ac.uk), Julien Harou (j.harou@ucl.ac.uk), 
 !Daniel P. Loucks (dpl3@cornell.edu), Marshall Taylor, Peter French, 
+!James Tomlinson (james.e.tomlinson@atkinsglobal.com)
 !This program is free software under the General Public Licence, GPL (>=v2)
 !Read the 'GPL License.txt' file distributed with this source code for a full license statement.
 !
@@ -124,7 +125,7 @@ C
 			storage_end(k)=ESTO(i)
 		endif
 
-		if (GageNF(i) == .true.) then
+		if (GageNF(i)) then
 			t_gage=t_gage+1
 			k2=k2+1
 			Gage_Name(k2)=TRIM(NNAME(i)) 
@@ -132,7 +133,7 @@ C
 			gage(k2)=NQinn(i) 
 		endif
 		
-		if (cons_node(i)== .true.)then
+		if (cons_node(i))then
 			t_cons=t_cons+1
 			k3=K3+1
 			cons_name(k3)=TRIM(NNAME(i)) 
@@ -148,7 +149,7 @@ C
 			tevap(k4)=TEvapn(i) 
 		endif
 	
-		if (seep_node(i)== .true.)then !seep_node defined read_sim_data line 723
+		if (seep_node(i))then !seep_node defined read_sim_data line 723
 			tseep=tseep+1
 			k5=k5+1
 			seep_name(k5)=TRIM(NNAME(i)) 
@@ -261,7 +262,7 @@ C
 		
 		!Makes arrays for output of loss output (only for links with loss)
 		!Only if there is linkloss or if a rating table is present
-		if (iflinkloss(i)==.true. .or. LossMethod(i) == 2) then   
+		if (iflinkloss(i) .or. LossMethod(i) == 2) then   
 			tloss=tloss+1
 			k=k+1
 			Loss(k)=TLossL(i)  !Beg. storage array
@@ -269,14 +270,14 @@ C
 		endif
 		
 	!Makes arrays for output of endflow (only if endflow != begflow)
-		if (iflinkloss(i)==.true. .or. LossMethod(i) == 2.or.
+		if (iflinkloss(i) .or. LossMethod(i) == 2.or.
      &		L_Method(i)>= 1) then   !Only goes into loop if there is linkloss or routing
 			tend=tend+1
 			k1=k1+1
 			Endln(k1)=EQLN(i)  !Beg. storage array
 			End_Name(k1)=TRIM(LName(i)) !Name for begstorage nodes
 		endif
-		if (powerlink(i)==.true. .or. pumplink(i)== .true.) then !for energy
+		if (powerlink(i) .or. pumplink(i)) then !for energy
 			tenergy=tenergy+1
 			k2=k2+1
 			energyln(k2)=ENERGY(i)  !Beg. storage array
@@ -397,7 +398,7 @@ C
 		
 		!Makes arrays for output of loss output (only for links with loss)
 		!Only if there is linkloss or if a rating table is present
-		if (iflinkloss(i)==.true. .or. LossMethod(i) == 2) then   
+		if (iflinkloss(i) .or. LossMethod(i) == 2) then   
 			tloss=tloss+1
 			k=k+1
 			Loss(k)=TLossL(i)  !Beg. storage array
@@ -405,14 +406,14 @@ C
 		endif
 		
 	!Makes arrays for output of endflow (only if endflow != begflow)
-		if (iflinkloss(i)==.true. .or. LossMethod(i) == 2.or.
+		if (iflinkloss(i) .or. LossMethod(i) == 2.or.
      &		L_Method(i)>= 1) then   !Only goes into loop if there is linkloss or routing
 			tend=tend+1
 			k1=k1+1
 			Endln(k1)=EQLN(i)  !Beg. storage array
 			End_Name(k1)=TRIM(LName(i)) !Name for begstorage nodes
 		endif
-		if (powerlink(i)==.true. .or. pumplink(i)== .true.) then !for energy
+		if (powerlink(i) .or. pumplink(i)) then !for energy
 			tenergy=tenergy+1
 			k2=k2+1
 			energyln(k2)=ENERGY(i)  !Beg. storage array
@@ -539,7 +540,7 @@ C
 
 		
 	
-		if (GageNF(i) == .true.) then
+		if (GageNF(i)) then
 			t_gage=t_gage+1
 			k2=k2+1
 			Gage_Name(k2)=TRIM(NNAME(i)) 
@@ -547,7 +548,7 @@ C
 			gage(k2)=NQinn(i) 
 		endif
 		
-		if (cons_node(i)== .true.)then
+		if (cons_node(i))then
 			t_cons=t_cons+1
 			k3=K3+1
 			cons_name(k3)=TRIM(NNAME(i)) 
@@ -563,7 +564,7 @@ C
 			tevap(k4)=TEvapn(i) 
 		endif
 	
-		if (seep_node(i)== .true.)then !seep_node defined read_sim_data line 723
+		if (seep_node(i))then !seep_node defined read_sim_data line 723
 			tseep=tseep+1
 			k5=k5+1
 			seep_name(k5)=TRIM(NNAME(i)) 

@@ -2,6 +2,7 @@
 !Authors:
 !G Pegram, Daniel P. Loucks (dpl3@cornell.edu), Marshall Taylor, Peter French, Huicheng Zhou
 !Evgenii Matrosov (evgenii.matrosov@ucl.ac.uk), Julien Harou (j.harou@ucl.ac.uk), Anil Dikshit
+!James Tomlinson (james.e.tomlinson@atkinsglobal.com)
 !This program is free software under the General Public Licence, GPL (>=v2)
 !Read the 'GPL License.txt' file distributed with this source code for a full license statement.
 !
@@ -1811,8 +1812,8 @@ C  for Hydropower/pump
 		  aline=pBalance(L)%charBalance
 		  iPos = INDEX(aLine, ':')
 		  read(aLine(iPos+1:),*)aVar, aVar, aVar,avar,avar,          
-     &         ((ResvIDInGrp(i,iGrpSeq),RuleResVol(n,i,iGrpSeq),
-     &		 BalanceVol(n,i,iGrpSeq)),i=1,nResvInGrp(iGrpSeq))  
+     &         (ResvIDInGrp(i,iGrpSeq),RuleResVol(n,i,iGrpSeq),
+     &		 BalanceVol(n,i,iGrpSeq),i=1,nResvInGrp(iGrpSeq))  
  		  call unitConversion(1,UVol, GrpVol(n,iGrpSeq) )
             do i = 1,nResvInGrp(iGrpSeq)
               call unitConversion(1,UVol, BalanceVol(n,i,iGrpSeq) )
@@ -1849,8 +1850,8 @@ C  for Hydropower/pump
           !if (bal==0) then !later add in read bal so when balance is on lead reservior you dont need to put in its own balance
 		read(aLine(iPos+1:),*)aVar, aVar, aVar,
      &         BalMethod(n,IGrpSeq),GrpVol(n,IGrpSeq), !Evgenii 1007285 added balance method choice; 0 - Old iras balance method (group storage), 1 - Balance depends only on rule reservoir storage
-     &         ((ResvIDInGrp(i,iGrpSeq),RuleResVol(n,i,iGrpSeq),
-     &	     BalanceVol(n,i,iGrpSeq)),i=1,nResvInGrp(iGrpSeq))                     		  		  
+     &         (ResvIDInGrp(i,iGrpSeq),RuleResVol(n,i,iGrpSeq),
+     &	     BalanceVol(n,i,iGrpSeq),i=1,nResvInGrp(iGrpSeq))                     		  		  
 		  call unitConversion(1,UVol, GrpVol(n,iGrpSeq) )
             do i = 1,nResvInGrp(iGrpSeq)
               call unitConversion(1,UVol, BalanceVol(n,i,iGrpSeq) )
@@ -2050,7 +2051,8 @@ C  for Hydropower/pump
       implicit none
       INCLUDE 'IRAS_SYS.INC'
 !  INPUT
-      INTEGER*2 iComp, iType         !iComp = 1 for nodes; 2 for links
+      INTEGER iComp
+      INTEGER*2 iType         !iComp = 1 for nodes; 2 for links
       REAL*4 x
 !  OUTPUT
       !x

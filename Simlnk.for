@@ -1,6 +1,7 @@
 !Copyright (c) 2000 Cornell University
 !Authors:
 !Daniel P. Loucks (dpl3@cornell.edu), Marshall Taylor, Huicheng Zhou,Peter French
+!James Tomlinson (james.e.tomlinson@atkinsglobal.com)
 !This program is free software under the General Public Licence, GPL (>=v2)
 !Read the 'GPL License.txt' file distributed with this source code for a full license statement.
 !
@@ -97,7 +98,7 @@ C     link storage were emptied during the current within-year period.
 
 !     compute link loss
 !	Evgenii added if conditoin so only computes loss when loss enabled, 100305
-      if (iflinkloss(LINK)==.true. .or. LossMethod(LINK) == 2) then  
+      if ((iflinkloss(LINK).eqv..true.).or.(LossMethod(LINK) == 2)) then  
 		call ComputeLinkLoss(Link, QIn, EvapLn)
       else
 		EVAPLN=0
