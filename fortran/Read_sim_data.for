@@ -1153,7 +1153,7 @@ C
      &          .and.pEvapor(L)%CompType==1
      &          .and.pEvapor(L)%ID==IDNode)then
                 NODE_EVAP(iReadSeq) = pEvapor(L)%Evaporation
-                if(NODE_EVAP(iReadSeq)>0.) NODE_EVAP_ON(iReadSeq)=.true.
+                if(NODE_EVAP(iReadSeq)>0.) NODE_EVAP_ON(iReadSeq)=1.
                 call UnitConversion(1, ULoss, NODE_EVAP(iReadSeq) )    ! -> m/day
                 exit
               END IF
@@ -1922,8 +1922,8 @@ C  for Hydropower/pump
 		    aline=pBalance(L)%charBalance
 		    iPos = INDEX(aLine, ':')
 		    read(aLine(iPos+1:),*)aVar, aVar, aVar,avar,avar,          
-     &         ((ResvIDInGrp(i,iGrpSeq),RuleResVol(n,i,iGrpSeq),
-     &		   BalanceVol(n,i,iGrpSeq)),i=1,nResvInGrp(iGrpSeq))  
+     &         (ResvIDInGrp(i,iGrpSeq),RuleResVol(n,i,iGrpSeq),
+     &		   BalanceVol(n,i,iGrpSeq),i=1,nResvInGrp(iGrpSeq))  
  		    call unitConversion(1,UVol, GrpVol(n,iGrpSeq) )
             do i = 1,nResvInGrp(iGrpSeq)
               call unitConversion(1,UVol, BalanceVol(n,i,iGrpSeq) )
@@ -1960,8 +1960,8 @@ C  for Hydropower/pump
           !if (bal==0) then !later add in read bal so when balance is on lead reservior you dont need to put in its own balance
 		read(aLine(iPos+1:),*)aVar, aVar, aVar,
      &         BalMethod(n,IGrpSeq),GrpVol(n,IGrpSeq), !Evgenii 1007285 added balance method choice; 0 - Old iras balance method (group storage), 1 - Balance depends only on rule reservoir storage
-     &         ((ResvIDInGrp(i,iGrpSeq),RuleResVol(n,i,iGrpSeq),
-     &	     BalanceVol(n,i,iGrpSeq)),i=1,nResvInGrp(iGrpSeq))                     		  		  
+     &         (ResvIDInGrp(i,iGrpSeq),RuleResVol(n,i,iGrpSeq),
+     &	     BalanceVol(n,i,iGrpSeq),i=1,nResvInGrp(iGrpSeq))                     		  		  
 		  call unitConversion(1,UVol, GrpVol(n,iGrpSeq) )
             do i = 1,nResvInGrp(iGrpSeq)
               call unitConversion(1,UVol, BalanceVol(n,i,iGrpSeq) )

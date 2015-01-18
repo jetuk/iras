@@ -97,7 +97,7 @@ C     link storage were emptied during the current within-year period.
 
 !     compute link loss
 !	Evgenii added if conditoin so only computes loss when loss enabled, 100305
-      if (iflinkloss(LINK)==.true. .or. LossMethod(LINK) == 2) then  
+      if (iflinkloss(LINK) .or. (LossMethod(LINK) == 2)) then  
 		call ComputeLinkLoss(Link, QIn, EvapLn)
       else
 		EVAPLN=0
@@ -136,10 +136,10 @@ C     not equal it is necessary to redistribute the link volume into
 C     the current routing reservoirs evenly.
       Tot_VOLUME = 0.0
       IF(L_NRTRES(LINK).NE.LAST_NRTRES(LINK))THEN
-         DO JJ = 1, LAST_NRTRES(LINK)
+         DO JJ = 1,LAST_NRTRES(LINK)
            Tot_VOLUME = Tot_VOLUME + SUB_LVOL(JJ,LINK)
          END do
-         DO JJ = 1, L_NRTRES(LINK)
+         DO JJ = 1,L_NRTRES(LINK)
            SUB_LVOL(JJ,LINK) = Tot_VOLUME/L_NRTRES(LINK)
          END do
       ENDIF

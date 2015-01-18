@@ -296,7 +296,7 @@
 	    IF(sto_perf_node(nn)) THEN  
 		  do i=1,perf_pts(nn)
 			 !YearFailEvent is how many failures for each zone occured in each year for each performance node
-			 if(YearFailEvent(ny,nn,i)==.true.) then
+			 if(YearFailEvent(ny,nn,i)) then
 				nAnnualFail(i,nn)=nAnnualFail(i,nn)+1
 			 end if
 		  end do

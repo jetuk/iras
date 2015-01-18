@@ -682,7 +682,7 @@ C              If a deficit, compute required supplemental releases
                       !Set OrigTemp_STEP_DEFICIT which will be used later after Temp_STEP_DEFICIT is modified                 				 
 		              !Evgenii- Need to write check to make sure sources that use priorities are never also used with contribution factors	        			 
          		      !In the case of source priorities
-         		      if (srcpriorities(nn)==.true.) then
+         		      if (srcpriorities(nn)) then
         		       OrigTemp_STEP_DEFICIT=Temp_STEP_DEFICIT(NN)  
          		       !Reduce Temp_STEP_DEFICIT by the amount that the reservior can release 
        			       Temp_STEP_DEFICIT(NN)=Temp_STEP_DEFICIT(NN)

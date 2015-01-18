@@ -629,7 +629,7 @@ C     Initialize vectors
 	   TsSIsum(NODE) = 0
 	   TS_SHRTG(NODE) = 0
 	   Ts_DMD_Sum(NODE) = 0
-	   NODE_EVAP_ON(Node)=.false.
+	   NODE_EVAP_ON(Node)=0.
 	   nodesourcechange(node)=.false. 
 	   DO JJ = 1, IAGMAX
             NODE_VOL(JJ,NODE)  = 0.0
@@ -1040,7 +1040,7 @@ C     Initialize number of previous routing reservoirs
         endsearch=.false.
         if(ndemnodelink(ln)>0 .and. dmdlink(ln)) then
                 do i=1,tnodes
-                    if (nodesourcechange(i)==.true.) then
+                    if (nodesourcechange(i)) then
                         do j=1,MXSUPLY				   
 			                if(SUPL_Link(j,i)==ln) then
                                 n=n+1
