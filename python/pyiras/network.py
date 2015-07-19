@@ -204,7 +204,13 @@ class IRASNode(object):
         nodes = []
         row = fh.next() # First node
         while not row.startswith('END OF NODES'):
-            values = row.split()
+            # Skip comments
+            if row.startswith('!'):
+                row = fh.readline()
+                continue
+
+            data = row.strip()
+            values = data.split()
             if len(values) != 13:
                 raise IOError('Node definition contains incorrect number of columns')
 
@@ -290,7 +296,15 @@ class IRASLink(object):
         links = []
         row = fh.next() # First node
         while not row.startswith('END OF LINKS'):
-            values = row.split()
+            # Skip comments
+            if row.startswith('!'):
+                row = fh.readline()
+                continue
+
+            data = row.strip()
+            if '!' in row:
+                data, comment = data.split('!', 1)
+            values = data.split()
             if len(values) < 10:
                 raise IOError('Link definition contains incorrect number of columns')
 
