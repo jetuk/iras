@@ -28,7 +28,7 @@ class IRASNetwork(object):
 
         fh = open(filename, 'r')
 
-        graph = nx.Graph()
+        graph = nx.DiGraph()
 
         # Add nodes from INP file
         print 'Loading Nodes...'
@@ -88,6 +88,13 @@ class IRASNetwork(object):
     def demand_nodes(self, ):
         return [n for n in self.graph.nodes_iter() if n.is_demand]
 
+    def nodes(self, ):
+        for n in self.graph.nodes_iter():
+            yield n
+
+    def links(self, ):
+        for u,v,d in self.graph.edges_iter(data=True):
+            yield u, v, d['object']
 
     def draw_with_mpl(self, ax=None):
 
@@ -232,6 +239,7 @@ class IRASLink(object):
                  is_demand=False, bidirectional=False):
 
         self.link_id = link_id
+        self.name = name
         self.from_node_id = from_node_id
         self.to_node_id = to_node_id
         self.length = length
